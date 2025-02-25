@@ -14,7 +14,7 @@ declare global {
 function generateToken(user: SelectUser) {
   return jwt.sign(
     { id: user.id, username: user.username, isAdmin: user.isAdmin },
-    process.env.SESSION_SECRET!,
+    process.env.SESSION_SECRET || 'secret',
     { expiresIn: '24h' }
   );
 }
@@ -28,7 +28,7 @@ function authenticateToken(req: Request, res: Response, next: NextFunction) {
   }
 
   try {
-    const user = jwt.verify(token, process.env.SESSION_SECRET!) as SelectUser;
+    const user = jwt.verify(token, process.env.SESSION_SECRET || 'secret') as SelectUser;
     req.user = user;
     next();
   } catch (err) {
@@ -48,7 +48,6 @@ export function setupAuth(app: Express) {
         return res.status(401).json({ message: "Invalid credentials" });
       }
 
-      // Простая проверка пароля
       if (password !== user.password) {
         console.log('Login failed: Invalid password -', username);
         return res.status(401).json({ message: "Invalid credentials" });
@@ -72,11 +71,7 @@ export function setupAuth(app: Express) {
         return res.status(400).json({ message: "Username already exists" });
       }
 
-      const user = await storage.createUser({
-        ...req.body,
-        password: req.body.password, // Сохраняем пароль как есть
-      });
-
+      const user = await storage.createUser(req.body);
       const token = generateToken(user);
       console.log('Register success:', user.username);
       res.status(201).json({ user, token });
