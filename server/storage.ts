@@ -26,8 +26,8 @@ class DatabaseStorage {
     try {
       this.sessionStore = new PostgresSessionStore({
         pool,
-        // Отключаем автоматическое создание таблицы
-        createTableIfMissing: false,
+        // Включаем автоматическое создание таблицы
+        createTableIfMissing: true,
         tableName: 'sessions',
         pruneSessionInterval: 60
       });
