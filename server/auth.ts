@@ -22,6 +22,7 @@ async function hashPassword(password: string) {
 }
 
 async function comparePasswords(supplied: string, stored: string) {
+  if (!stored.includes('.')) return supplied === stored; // Для нехешированного пароля админа
   const [hashed, salt] = stored.split(".");
   const hashedBuf = Buffer.from(hashed, "hex");
   const suppliedBuf = (await scryptAsync(supplied, salt, 64)) as Buffer;
@@ -89,17 +90,13 @@ export function setupAuth(app: Express) {
         return res.status(401).json({ message: "Invalid credentials" });
       }
 
-      // Проверяем пароль для админа
-      if (username === 'admin') {
-        console.log('Admin login attempt');
-        if (password === 'admin123') {
-          console.log('Admin login successful with default password');
-          const token = generateToken(user);
-          return res.json({ user, token });
-        }
+      // Специальная проверка для админа
+      if (username === 'admin' && password === 'admin123') {
+        console.log('Admin login successful');
+        const token = generateToken(user);
+        return res.json({ user, token });
       }
 
-      // Для обычных пользователей проверяем хешированный пароль
       const isValid = await comparePasswords(password, user.password);
       if (!isValid) {
         console.log('Login failed: Invalid password -', username);
