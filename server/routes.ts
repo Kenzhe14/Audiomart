@@ -61,81 +61,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.json(product);
   });
 
-  app.post("/api/products", async (req, res) => {
-    if (!req.isAuthenticated() || !req.user.isAdmin) {
-      return res.sendStatus(403);
-    }
-
-    // Генерируем уникальный SKU
-    const sku = `SKU${Date.now()}${Math.floor(Math.random() * 1000)}`;
-    const productData = { 
-      ...req.body, 
-      sku,
-      stock: req.body.stock || 0 // Ensure stock has a default value
-    };
-
-    const parsed = insertProductSchema.safeParse(productData);
-    if (!parsed.success) return res.status(400).json(parsed.error);
-
-    try {
-      const product = await storage.createProduct(parsed.data);
-      res.status(201).json(product);
-    } catch (error) {
-      console.error('Error creating product:', error);
-      res.status(500).json({ error: 'Failed to create product' });
-    }
-  });
-
-  app.patch("/api/products/:id", async (req, res) => {
-    if (!req.isAuthenticated() || !req.user.isAdmin) {
-      return res.sendStatus(403);
-    }
-
-    const productId = parseInt(req.params.id);
-    if (isNaN(productId)) {
-      return res.status(400).json({ error: 'Invalid product ID' });
-    }
-
-    try {
-      // Проверяем существование продукта
-      const existingProduct = await storage.getProduct(productId);
-      if (!existingProduct) {
-        return res.status(404).json({ error: 'Product not found' });
-      }
-
-      const product = await storage.updateProduct(productId, req.body);
-      res.json(product);
-    } catch (error) {
-      console.error('Error updating product:', error);
-      res.status(500).json({ error: 'Failed to update product' });
-    }
-  });
-
-  app.delete("/api/products/:id", async (req, res) => {
-    if (!req.isAuthenticated() || !req.user.isAdmin) {
-      return res.sendStatus(403);
-    }
-
-    await storage.deleteProduct(parseInt(req.params.id));
-    res.sendStatus(204);
-  });
-
-  // Reviews
-  app.get("/api/products/:id/reviews", async (req, res) => {
-    const reviews = await storage.getProductReviews(parseInt(req.params.id));
-    res.json(reviews);
-  });
-
+  // Reviews - теперь с проверкой покупки
   app.post("/api/products/:id/reviews", async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
+
+    const productId = parseInt(req.params.id);
+    const userId = req.user.id;
+
+    // Проверяем, покупал ли пользователь этот товар
+    const orders = await storage.getOrders(userId);
+    const orderItems = await Promise.all(
+      orders.map(order => storage.getOrderItems(order.id))
+    );
+    const hasPurchased = orderItems.flat().some(item => item.productId === productId);
+
+    if (!hasPurchased) {
+      return res.status(403).json({
+        error: "Вы можете оставить отзыв только после покупки товара"
+      });
+    }
 
     const parsed = insertReviewSchema.safeParse(req.body);
     if (!parsed.success) return res.status(400).json(parsed.error);
 
     const review = await storage.createReview({
       ...parsed.data,
-      userId: req.user.id,
-      productId: parseInt(req.params.id),
+      userId,
+      productId,
     });
     res.status(201).json(review);
   });
