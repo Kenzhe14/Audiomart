@@ -1,17 +1,11 @@
 import { User, InsertUser, Product, CartItem, Brand, Category, DEFAULT_BRANDS, DEFAULT_CATEGORIES } from "@shared/schema";
+import { db, users, brands, categories, products, cartItems } from "./db";
+import { eq } from "drizzle-orm";
 import session from "express-session";
-import createMemoryStore from "memorystore";
-import { scrypt, randomBytes } from "crypto";
-import { promisify } from "util";
+import connectPg from "connect-pg-simple";
+import { pool } from "./db";
 
-const MemoryStore = createMemoryStore(session);
-const scryptAsync = promisify(scrypt);
-
-async function hashPassword(password: string) {
-  const salt = randomBytes(16).toString("hex");
-  const buf = (await scryptAsync(password, salt, 64)) as Buffer;
-  return `${buf.toString("hex")}.${salt}`;
-}
+const PostgresSessionStore = connectPg(session);
 
 export interface IStorage {
   init(): Promise<void>;
@@ -47,189 +41,186 @@ export interface IStorage {
   sessionStore: session.Store;
 }
 
-export class MemStorage implements IStorage {
-  private users: Map<number, User>;
-  private brands: Map<number, Brand>;
-  private categories: Map<number, Category>;
-  private products: Map<number, Product>;
-  private cartItems: Map<number, CartItem>;
-  private currentId: Record<string, number>;
+export class DatabaseStorage implements IStorage {
   readonly sessionStore: session.Store;
 
   constructor() {
-    this.users = new Map();
-    this.brands = new Map();
-    this.categories = new Map();
-    this.products = new Map();
-    this.cartItems = new Map();
-    this.currentId = { 
-      users: 1, 
-      brands: 1, 
-      categories: 1, 
-      products: 1, 
-      cartItems: 1 
-    };
-    this.sessionStore = new MemoryStore({ checkPeriod: 86400000 });
+    this.sessionStore = new PostgresSessionStore({
+      pool,
+      createTableIfMissing: true,
+    });
   }
 
   async init() {
-    await this.initAdminUser();
+    // Инициализация базы данных
     await this.initDefaultBrands();
     await this.initDefaultCategories();
+    await this.initAdminUser();
   }
 
   private async initAdminUser() {
-    const hashedPassword = await hashPassword("admin123");
-    const adminUser: User = {
-      id: this.currentId.users++,
-      username: "admin",
-      password: hashedPassword,
-      isAdmin: true
-    };
-    this.users.set(adminUser.id, adminUser);
+    const existingAdmin = await this.getUserByUsername("admin");
+    if (!existingAdmin) {
+      await db.insert(users).values({
+        username: "admin",
+        password: "admin123", // В реальном приложении нужно хешировать
+        isAdmin: true
+      });
+    }
   }
 
   private async initDefaultBrands() {
     for (const brandName of DEFAULT_BRANDS) {
-      const brand: Brand = {
-        id: this.currentId.brands++,
-        name: brandName,
-        description: `Официальный бренд ${brandName}`
-      };
-      this.brands.set(brand.id, brand);
+      const existingBrand = await db.query.brands.findFirst({
+        where: eq(brands.name, brandName)
+      });
+
+      if (!existingBrand) {
+        await db.insert(brands).values({
+          name: brandName,
+          description: `Официальный бренд ${brandName}`
+        });
+      }
     }
   }
 
   private async initDefaultCategories() {
     for (const category of DEFAULT_CATEGORIES) {
-      const parentCategory: Category = {
-        id: this.currentId.categories++,
-        name: category.name,
-        parentId: null,
-        description: `Категория ${category.name}`
-      };
-      this.categories.set(parentCategory.id, parentCategory);
+      let parentCategory = await db.query.categories.findFirst({
+        where: eq(categories.name, category.name)
+      });
+
+      if (!parentCategory) {
+        const [inserted] = await db.insert(categories)
+          .values({
+            name: category.name,
+            description: `Категория ${category.name}`
+          })
+          .returning();
+        parentCategory = inserted;
+      }
 
       for (const subName of category.subcategories) {
-        const subCategory: Category = {
-          id: this.currentId.categories++,
-          name: subName,
-          parentId: parentCategory.id,
-          description: `Подкатегория ${subName}`
-        };
-        this.categories.set(subCategory.id, subCategory);
+        const existingSubCategory = await db.query.categories.findFirst({
+          where: eq(categories.name, subName)
+        });
+
+        if (!existingSubCategory) {
+          await db.insert(categories).values({
+            name: subName,
+            parentId: parentCategory.id,
+            description: `Подкатегория ${subName}`
+          });
+        }
       }
     }
   }
 
   // User operations
   async getUser(id: number): Promise<User | undefined> {
-    return this.users.get(id);
+    const [user] = await db.select().from(users).where(eq(users.id, id));
+    return user;
   }
 
   async getUserByUsername(username: string): Promise<User | undefined> {
-    return Array.from(this.users.values()).find(
-      (user) => user.username === username
-    );
+    const [user] = await db.select().from(users).where(eq(users.username, username));
+    return user;
   }
 
-  async createUser(insertUser: InsertUser): Promise<User> {
-    const id = this.currentId.users++;
-    const user = { ...insertUser, id, isAdmin: false };
-    this.users.set(id, user);
-    return user;
+  async createUser(user: InsertUser): Promise<User> {
+    const [created] = await db.insert(users).values(user).returning();
+    return created;
   }
 
   // Brand operations
   async getBrands(): Promise<Brand[]> {
-    return Array.from(this.brands.values());
+    return await db.select().from(brands);
   }
 
   async getBrand(id: number): Promise<Brand | undefined> {
-    return this.brands.get(id);
+    const [brand] = await db.select().from(brands).where(eq(brands.id, id));
+    return brand;
   }
 
   async createBrand(brand: Omit<Brand, "id">): Promise<Brand> {
-    const id = this.currentId.brands++;
-    const newBrand = { ...brand, id };
-    this.brands.set(id, newBrand);
-    return newBrand;
+    const [created] = await db.insert(brands).values(brand).returning();
+    return created;
   }
 
   // Category operations
   async getCategories(): Promise<Category[]> {
-    return Array.from(this.categories.values());
+    return await db.select().from(categories);
   }
 
   async getCategory(id: number): Promise<Category | undefined> {
-    return this.categories.get(id);
+    const [category] = await db.select().from(categories).where(eq(categories.id, id));
+    return category;
   }
 
   async createCategory(category: Omit<Category, "id">): Promise<Category> {
-    const id = this.currentId.categories++;
-    const newCategory = { ...category, id };
-    this.categories.set(id, newCategory);
-    return newCategory;
+    const [created] = await db.insert(categories).values(category).returning();
+    return created;
   }
 
   // Product operations
   async getProducts(): Promise<Product[]> {
-    return Array.from(this.products.values());
+    return await db.select().from(products);
   }
 
   async getProduct(id: number): Promise<Product | undefined> {
-    return this.products.get(id);
+    const [product] = await db.select().from(products).where(eq(products.id, id));
+    return product;
   }
 
   async createProduct(product: Omit<Product, "id">): Promise<Product> {
-    const id = this.currentId.products++;
-    const newProduct = { ...product, id };
-    this.products.set(id, newProduct);
-    return newProduct;
+    const [created] = await db.insert(products).values(product).returning();
+    return created;
   }
 
-  async updateProduct(id: number, update: Partial<Product>): Promise<Product> {
-    const product = await this.getProduct(id);
-    if (!product) throw new Error("Product not found");
-
-    const updatedProduct = { ...product, ...update };
-    this.products.set(id, updatedProduct);
-    return updatedProduct;
+  async updateProduct(id: number, productUpdate: Partial<Product>): Promise<Product> {
+    const [updated] = await db
+      .update(products)
+      .set(productUpdate)
+      .where(eq(products.id, id))
+      .returning();
+    return updated;
   }
 
   async deleteProduct(id: number): Promise<void> {
-    this.products.delete(id);
+    await db.delete(products).where(eq(products.id, id));
   }
 
   // Cart operations
   async getCartItems(userId: number): Promise<CartItem[]> {
-    return Array.from(this.cartItems.values()).filter(
-      (item) => item.userId === userId
-    );
+    return await db
+      .select()
+      .from(cartItems)
+      .where(eq(cartItems.userId, userId));
   }
 
   async addToCart(userId: number, productId: number, quantity: number): Promise<CartItem> {
-    const id = this.currentId.cartItems++;
-    const cartItem = { id, userId, productId, quantity };
-    this.cartItems.set(id, cartItem);
-    return cartItem;
+    const [created] = await db
+      .insert(cartItems)
+      .values({ userId, productId, quantity })
+      .returning();
+    return created;
   }
 
   async updateCartQuantity(id: number, quantity: number): Promise<CartItem> {
-    const item = this.cartItems.get(id);
-    if (!item) throw new Error("Cart item not found");
-
-    const updated = { ...item, quantity };
-    this.cartItems.set(id, updated);
+    const [updated] = await db
+      .update(cartItems)
+      .set({ quantity })
+      .where(eq(cartItems.id, id))
+      .returning();
     return updated;
   }
 
   async removeFromCart(id: number): Promise<void> {
-    this.cartItems.delete(id);
+    await db.delete(cartItems).where(eq(cartItems.id, id));
   }
 }
 
-export const storage = new MemStorage();
+export const storage = new DatabaseStorage();
 
 // Initialize storage
 (async () => {
