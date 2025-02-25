@@ -13,22 +13,26 @@ class DatabaseStorage {
 
   constructor() {
     console.log('Initializing DatabaseStorage...');
-    this.sessionStore = new PostgresSessionStore({
-      pool,
-      createTableIfMissing: true,
-      tableName: 'sessions'
-    });
-    console.log('DatabaseStorage initialized');
+    try {
+      this.sessionStore = new PostgresSessionStore({
+        pool,
+        createTableIfMissing: true,
+        tableName: 'user_sessions', 
+        pruneSessionInterval: 60
+      });
+      console.log('Session store initialized');
+    } catch (error) {
+      console.error('Failed to initialize session store:', error);
+      throw error;
+    }
   }
 
   async init() {
     console.log('Starting storage initialization...');
     try {
-      await Promise.all([
-        this.initBrandsIfNeeded(),
-        this.initCategoriesIfNeeded(),
-        this.initAdminIfNeeded()
-      ]);
+      await this.initBrandsIfNeeded();
+      await this.initCategoriesIfNeeded();
+      await this.initAdminIfNeeded();
       console.log('Storage initialization completed successfully');
     } catch (error) {
       console.error('Error during storage initialization:', error);
@@ -281,7 +285,6 @@ class DatabaseStorage {
 console.log('Creating storage instance...');
 export const storage = new DatabaseStorage();
 
-console.log('Starting storage initialization process...');
 storage.init()
   .then(() => console.log('Storage initialized successfully'))
   .catch(error => {
