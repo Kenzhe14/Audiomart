@@ -9,9 +9,7 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/use-auth";
-import { useMutation, useQuery } from "@tanstack/react-query";
-import { apiRequest, queryClient } from "@/lib/queryClient";
-import { useToast } from "@/hooks/use-toast";
+import { useQuery } from "@tanstack/react-query";
 import { Badge } from "@/components/ui/badge";
 import { ShareButtons } from "./share-buttons";
 import { useState } from "react";
@@ -19,8 +17,6 @@ import { Loader2 } from "lucide-react";
 import { Link } from "wouter";
 
 export default function ProductCard({ product }: { product: Product }) {
-  const { user } = useAuth();
-  const { toast } = useToast();
   const [imageLoaded, setImageLoaded] = useState(false);
 
   const { data: brands = [], isLoading: brandsLoading } = useQuery<Brand[]>({
@@ -33,22 +29,6 @@ export default function ProductCard({ product }: { product: Product }) {
 
   const brand = brands.find(b => b.id === product.brandId);
   const category = categories.find(c => c.id === product.categoryId);
-
-  const addToCartMutation = useMutation({
-    mutationFn: async () => {
-      await apiRequest("POST", "/api/cart", {
-        productId: product.id,
-        quantity: 1,
-      });
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/cart"] });
-      toast({
-        title: "Добавлено в корзину",
-        description: `${product.name} добавлен в вашу корзину.`,
-      });
-    },
-  });
 
   if (brandsLoading || categoriesLoading) {
     return (
@@ -111,18 +91,11 @@ export default function ProductCard({ product }: { product: Product }) {
             {product.stock > 0 ? `В наличии: ${product.stock}` : 'Нет в наличии'}
           </span>
         </div>
-        {user && product.stock > 0 && (
-          <Button
-            onClick={() => addToCartMutation.mutate()}
-            disabled={addToCartMutation.isPending}
-            className="transition-transform hover:scale-105"
-          >
-            {addToCartMutation.isPending ? (
-              <Loader2 className="h-4 w-4 animate-spin mr-2" />
-            ) : null}
-            В корзину
+        <Link href={`/products/${product.id}`}>
+          <Button className="transition-transform hover:scale-105">
+            Подробнее
           </Button>
-        )}
+        </Link>
       </CardFooter>
     </Card>
   );
