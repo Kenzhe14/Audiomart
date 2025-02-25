@@ -15,10 +15,14 @@ import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
 import ProductReviews from "./product-reviews";
 import { ShareButtons } from "./share-buttons";
+import { ProductView3D } from "./product-view-3d";
+import { useState } from "react";
+import { View, ImageIcon } from "lucide-react";
 
 export default function ProductCard({ product }: { product: Product }) {
   const { user } = useAuth();
   const { toast } = useToast();
+  const [show3D, setShow3D] = useState(false);
 
   const { data: brands = [] } = useQuery<Brand[]>({
     queryKey: ["/api/brands"],
@@ -60,6 +64,18 @@ export default function ProductCard({ product }: { product: Product }) {
             </CardDescription>
           </div>
           <div className="flex gap-2">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setShow3D(!show3D)}
+              className="relative"
+            >
+              {show3D ? (
+                <ImageIcon className="h-4 w-4" />
+              ) : (
+                <View className="h-4 w-4" />
+              )}
+            </Button>
             <ShareButtons
               title={product.name}
               url={window.location.origin + "/products/" + product.id}
@@ -74,12 +90,16 @@ export default function ProductCard({ product }: { product: Product }) {
       </CardHeader>
       <CardContent className="flex-grow">
         <div className="aspect-square overflow-hidden rounded-md mb-4">
-          <img
-            src={product.imageUrl}
-            alt={product.name}
-            loading="lazy"
-            className="w-full h-full object-cover transition-transform duration-200 motion-safe:hover:scale-105 motion-reduce:hover:scale-100"
-          />
+          {show3D ? (
+            <ProductView3D />
+          ) : (
+            <img
+              src={product.imageUrl}
+              alt={product.name}
+              loading="lazy"
+              className="w-full h-full object-cover transition-transform duration-200 motion-safe:hover:scale-105 motion-reduce:hover:scale-100"
+            />
+          )}
         </div>
         <p className="text-sm text-muted-foreground line-clamp-2">
           {product.description}
