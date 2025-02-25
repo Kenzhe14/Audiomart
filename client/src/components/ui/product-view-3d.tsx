@@ -12,7 +12,7 @@ function Model() {
   );
 }
 
-export function ProductView3D() {
+function ProductView3DComponent() {
   return (
     <div className="h-[400px] w-full relative">
       <Suspense fallback={
@@ -37,3 +37,6 @@ export function ProductView3D() {
     </div>
   );
 }
+
+export const ProductView3D = ProductView3DComponent;
+export default ProductView3DComponent;

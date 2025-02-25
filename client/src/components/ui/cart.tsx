@@ -1,4 +1,4 @@
-import { ShoppingCart } from "lucide-react";
+import { ShoppingCart, Loader2 } from "lucide-react";
 import {
   Sheet,
   SheetContent,
@@ -17,12 +17,12 @@ export default function Cart() {
   const { user } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
 
-  const { data: cartItems = [] } = useQuery<CartItem[]>({
+  const { data: cartItems = [], isLoading: isCartLoading } = useQuery<CartItem[]>({
     queryKey: ["/api/cart"],
     enabled: !!user,
   });
 
-  const { data: products = [] } = useQuery<Product[]>({
+  const { data: products = [], isLoading: isProductsLoading } = useQuery<Product[]>({
     queryKey: ["/api/products"],
   });
 
@@ -46,15 +46,26 @@ export default function Cart() {
 
   if (!user) return null;
 
-  const cartProducts = cartItems.map((item) => ({
-    ...item,
-    product: products.find((p) => p.id === item.productId)!,
-  }));
+  // Only proceed with cart calculations if we have both cart items and products
+  const cartProducts = cartItems.map((item) => {
+    const product = products.find((p) => p.id === item.productId);
+    if (!product) return null;
+    return { ...item, product };
+  }).filter((item): item is NonNullable<typeof item> => item !== null);
 
   const total = cartProducts.reduce(
     (sum, item) => sum + item.product.price * item.quantity,
     0
   );
+
+  // Show loading state while data is being fetched
+  if (isCartLoading || isProductsLoading) {
+    return (
+      <Button variant="ghost" disabled className="relative">
+        <Loader2 className="h-6 w-6 animate-spin" />
+      </Button>
+    );
+  }
 
   return (
     <Sheet open={isOpen} onOpenChange={setIsOpen}>
@@ -132,7 +143,7 @@ export default function Cart() {
               <p className="text-lg font-bold">
                 Итого: {total.toLocaleString('ru-RU')} ₸
               </p>
-              <Button className="w-full mt-4">
+              <Button className="w-full mt-4" onClick={() => setIsOpen(false)}>
                 Оформить заказ
               </Button>
             </div>
