@@ -15,18 +15,12 @@ import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
 import ProductReviews from "./product-reviews";
 import { ShareButtons } from "./share-buttons";
-import { lazy, Suspense, useState } from "react";
-import { View, ImageIcon, Loader2 } from "lucide-react";
-import { SafeSuspense } from "./safe-suspense";
-import { ErrorBoundary } from "./error-boundary";
-
-// Lazy load the 3D viewer
-const ProductView3D = lazy(() => import("./product-view-3d"));
+import { useState } from "react";
+import { Loader2 } from "lucide-react";
 
 export default function ProductCard({ product }: { product: Product }) {
   const { user } = useAuth();
   const { toast } = useToast();
-  const [show3D, setShow3D] = useState(false);
   const [imageLoaded, setImageLoaded] = useState(false);
 
   const { data: brands = [], isLoading: brandsLoading } = useQuery<Brand[]>({
@@ -72,23 +66,12 @@ export default function ProductCard({ product }: { product: Product }) {
             <CardTitle className="line-clamp-1">{product.name}</CardTitle>
             <CardDescription className="flex items-center gap-2">
               <span>{brand?.name}</span>
-              <span>•</span>
-              <span className="text-xs font-mono">SKU: {product.sku}</span>
+              <Badge variant="outline" className="text-xs">
+                SKU: {product.sku}
+              </Badge>
             </CardDescription>
           </div>
           <div className="flex gap-2">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => setShow3D(!show3D)}
-              className="relative"
-            >
-              {show3D ? (
-                <ImageIcon className="h-4 w-4" />
-              ) : (
-                <View className="h-4 w-4" />
-              )}
-            </Button>
             <ShareButtons
               title={product.name}
               url={window.location.origin + "/products/" + product.id}
@@ -103,36 +86,18 @@ export default function ProductCard({ product }: { product: Product }) {
       </CardHeader>
       <CardContent className="flex-grow">
         <div className="aspect-square overflow-hidden rounded-md mb-4 relative">
-          {show3D ? (
-            <ErrorBoundary
-              fallback={
-                <div className="flex items-center justify-center h-full bg-muted">
-                  <p className="text-sm text-muted-foreground">
-                    Не удалось загрузить 3D просмотр
-                  </p>
-                </div>
-              }
-            >
-              <SafeSuspense>
-                <ProductView3D />
-              </SafeSuspense>
-            </ErrorBoundary>
-          ) : (
-            <>
-              <div 
-                className={`absolute inset-0 bg-muted animate-pulse ${imageLoaded ? 'hidden' : ''}`}
-              />
-              <img
-                src={product.imageUrl}
-                alt={product.name}
-                loading="lazy"
-                onLoad={() => setImageLoaded(true)}
-                className={`w-full h-full object-cover transition-all duration-300 ${
-                  imageLoaded ? 'opacity-100' : 'opacity-0'
-                }`}
-              />
-            </>
-          )}
+          <div 
+            className={`absolute inset-0 bg-muted animate-pulse ${imageLoaded ? 'hidden' : ''}`}
+          />
+          <img
+            src={product.imageUrl}
+            alt={product.name}
+            loading="lazy"
+            onLoad={() => setImageLoaded(true)}
+            className={`w-full h-full object-cover transition-all duration-300 ${
+              imageLoaded ? 'opacity-100' : 'opacity-0'
+            }`}
+          />
         </div>
         <p className="text-sm text-muted-foreground line-clamp-2">
           {product.description}
