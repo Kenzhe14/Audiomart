@@ -13,10 +13,10 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
-import ProductReviews from "./product-reviews";
 import { ShareButtons } from "./share-buttons";
 import { useState } from "react";
 import { Loader2 } from "lucide-react";
+import { Link } from "wouter";
 
 export default function ProductCard({ product }: { product: Product }) {
   const { user } = useAuth();
@@ -63,42 +63,43 @@ export default function ProductCard({ product }: { product: Product }) {
       <CardHeader className="flex-none">
         <div className="flex items-start justify-between">
           <div>
-            <CardTitle className="line-clamp-1">{product.name}</CardTitle>
+            <Link href={`/products/${product.id}`}>
+              <CardTitle className="line-clamp-1 hover:underline cursor-pointer">
+                {product.name}
+              </CardTitle>
+            </Link>
             <CardDescription className="flex items-center gap-2">
               <span>{brand?.name}</span>
-              <Badge variant="outline" className="text-xs">
-                SKU: {product.sku}
-              </Badge>
+              {category && (
+                <Badge variant="outline" className="text-xs">
+                  {category.name}
+                </Badge>
+              )}
             </CardDescription>
           </div>
-          <div className="flex gap-2">
-            <ShareButtons
-              title={product.name}
-              url={window.location.origin + "/products/" + product.id}
-            />
-            {category && (
-              <Badge variant="outline" className="text-xs">
-                {category.name}
-              </Badge>
-            )}
-          </div>
+          <ShareButtons
+            title={product.name}
+            url={window.location.origin + "/products/" + product.id}
+          />
         </div>
       </CardHeader>
       <CardContent className="flex-grow">
-        <div className="aspect-square overflow-hidden rounded-md mb-4 relative">
-          <div 
-            className={`absolute inset-0 bg-muted animate-pulse ${imageLoaded ? 'hidden' : ''}`}
-          />
-          <img
-            src={product.imageUrl}
-            alt={product.name}
-            loading="lazy"
-            onLoad={() => setImageLoaded(true)}
-            className={`w-full h-full object-cover transition-all duration-300 ${
-              imageLoaded ? 'opacity-100' : 'opacity-0'
-            }`}
-          />
-        </div>
+        <Link href={`/products/${product.id}`}>
+          <div className="aspect-square overflow-hidden rounded-md mb-4 relative cursor-pointer">
+            <div 
+              className={`absolute inset-0 bg-muted animate-pulse ${imageLoaded ? 'hidden' : ''}`}
+            />
+            <img
+              src={product.imageUrl}
+              alt={product.name}
+              loading="lazy"
+              onLoad={() => setImageLoaded(true)}
+              className={`w-full h-full object-cover transition-all duration-300 ${
+                imageLoaded ? 'opacity-100' : 'opacity-0'
+              }`}
+            />
+          </div>
+        </Link>
         <p className="text-sm text-muted-foreground line-clamp-2">
           {product.description}
         </p>
@@ -123,9 +124,6 @@ export default function ProductCard({ product }: { product: Product }) {
           </Button>
         )}
       </CardFooter>
-      <div className="mt-6 px-6 pb-6">
-        <ProductReviews productId={product.id} />
-      </div>
     </Card>
   );
 }
