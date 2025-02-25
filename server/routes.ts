@@ -68,13 +68,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
     // Генерируем уникальный SKU
     const sku = `SKU${Date.now()}${Math.floor(Math.random() * 1000)}`;
-    const productData = { ...req.body, sku };
+    const productData = { 
+      ...req.body, 
+      sku,
+      stock: req.body.stock || 0 // Ensure stock has a default value
+    };
 
     const parsed = insertProductSchema.safeParse(productData);
     if (!parsed.success) return res.status(400).json(parsed.error);
 
-    const product = await storage.createProduct(parsed.data);
-    res.status(201).json(product);
+    try {
+      const product = await storage.createProduct(parsed.data);
+      res.status(201).json(product);
+    } catch (error) {
+      console.error('Error creating product:', error);
+      res.status(500).json({ error: 'Failed to create product' });
+    }
   });
 
   app.patch("/api/products/:id", async (req, res) => {
@@ -82,14 +91,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return res.sendStatus(403);
     }
 
+    const productId = parseInt(req.params.id);
+    if (isNaN(productId)) {
+      return res.status(400).json({ error: 'Invalid product ID' });
+    }
+
     try {
-      const product = await storage.updateProduct(
-        parseInt(req.params.id),
-        req.body
-      );
+      // Проверяем существование продукта
+      const existingProduct = await storage.getProduct(productId);
+      if (!existingProduct) {
+        return res.status(404).json({ error: 'Product not found' });
+      }
+
+      const product = await storage.updateProduct(productId, req.body);
       res.json(product);
-    } catch (err) {
-      res.sendStatus(404);
+    } catch (error) {
+      console.error('Error updating product:', error);
+      res.status(500).json({ error: 'Failed to update product' });
     }
   });
 
