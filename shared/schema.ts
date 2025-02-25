@@ -2,11 +2,23 @@ import { pgTable, text, serial, integer, boolean, doublePrecision, timestamp } f
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
+const phoneRegex = /^\+7\d{10}$/;
+
 export const users = pgTable("users", {
   id: serial("id").primaryKey(),
   username: text("username").notNull().unique(),
   password: text("password").notNull(),
-  isAdmin: boolean("is_admin").notNull().default(false)
+  isAdmin: boolean("is_admin").notNull().default(false),
+  phone: text("phone").notNull()
+});
+
+export const insertUserSchema = createInsertSchema(users).pick({
+  username: true,
+  password: true,
+  phone: true
+}).extend({
+  phone: z.string()
+    .regex(phoneRegex, "Номер телефона должен быть в формате +7XXXXXXXXXX")
 });
 
 export const brands = pgTable("brands", {
@@ -67,11 +79,6 @@ export const reviews = pgTable("reviews", {
   rating: integer("rating").notNull(),
   comment: text("comment"),
   createdAt: timestamp("created_at").defaultNow().notNull()
-});
-
-export const insertUserSchema = createInsertSchema(users).pick({
-  username: true,
-  password: true
 });
 
 export const insertBrandSchema = createInsertSchema(brands);

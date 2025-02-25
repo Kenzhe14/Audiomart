@@ -15,12 +15,19 @@ export default function AuthPage() {
 
   const loginForm = useForm({
     resolver: zodResolver(insertUserSchema),
-    defaultValues: { username: "", password: "" },
+    defaultValues: { 
+      username: "", 
+      password: "" 
+    },
   });
 
   const registerForm = useForm({
     resolver: zodResolver(insertUserSchema),
-    defaultValues: { username: "", password: "" },
+    defaultValues: { 
+      username: "", 
+      password: "",
+      phone: "+7"
+    },
   });
 
   if (user) {
@@ -98,6 +105,18 @@ export default function AuthPage() {
                     {...registerForm.register("password")}
                     type="password"
                     placeholder="Password"
+                  />
+                  <Input
+                    {...registerForm.register("phone")}
+                    placeholder="Номер телефона"
+                    onChange={(e) => {
+                      let value = e.target.value;
+                      if (!value.startsWith('+7')) {
+                        value = '+7' + value.replace('+7', '');
+                      }
+                      e.target.value = value;
+                      registerForm.setValue("phone", value);
+                    }}
                   />
                   <Button
                     type="submit"

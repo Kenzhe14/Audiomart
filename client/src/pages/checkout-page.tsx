@@ -20,9 +20,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Form } from "@/components/ui/form";
 
+const phoneRegex = /^\+7\d{10}$/;
+
 const checkoutSchema = z.object({
   shippingAddress: z.string().min(1, "Укажите адрес доставки"),
-  contactPhone: z.string().min(1, "Укажите контактный телефон"),
+  contactPhone: z.string()
+    .min(1, "Укажите контактный телефон")
+    .regex(phoneRegex, "Номер телефона должен быть в формате +7XXXXXXXXXX"),
 });
 
 type CheckoutForm = z.infer<typeof checkoutSchema>;
@@ -34,6 +38,9 @@ export default function CheckoutPage() {
 
   const form = useForm<CheckoutForm>({
     resolver: zodResolver(checkoutSchema),
+    defaultValues: {
+      contactPhone: "+7"
+    }
   });
 
   const { data: cartItems = [], isLoading: isCartLoading } = useQuery<CartItem[]>({
@@ -165,6 +172,14 @@ export default function CheckoutPage() {
               <Input
                 {...form.register("contactPhone")}
                 placeholder="Контактный телефон"
+                onChange={(e) => {
+                  let value = e.target.value;
+                  if (!value.startsWith('+7')) {
+                    value = '+7' + value.replace('+7', '');
+                  }
+                  e.target.value = value;
+                  form.setValue("contactPhone", value);
+                }}
               />
               <Button
                 type="submit"

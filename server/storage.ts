@@ -49,7 +49,8 @@ class DatabaseStorage {
       await db.insert(schema.users).values({
         username: "admin",
         password: "admin123",
-        isAdmin: true
+        isAdmin: true,
+        phone: "+70000000000" // Добавляем телефон для админа
       });
     }
   }
@@ -223,24 +224,8 @@ class DatabaseStorage {
   async getProductsWithReviews(): Promise<(Product & { reviews: Review[] })[]> {
     try {
       const [products, allReviews] = await Promise.all([
-        db.select({
-          id: schema.products.id,
-          name: schema.products.name,
-          price: schema.products.price,
-          description: schema.products.description,
-          imageUrl: schema.products.imageUrl,
-          categoryId: schema.products.categoryId,
-          brandId: schema.products.brandId,
-          stock: schema.products.stock,
-          sku: schema.products.sku
-        }).from(schema.products),
-        db.select({
-          id: schema.reviews.id,
-          productId: schema.reviews.productId,
-          rating: schema.reviews.rating,
-          comment: schema.reviews.comment,
-          createdAt: schema.reviews.createdAt
-        })
+        db.select().from(schema.products),
+        db.select()
           .from(schema.reviews)
           .orderBy(desc(schema.reviews.createdAt))
       ]);
