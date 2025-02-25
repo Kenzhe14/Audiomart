@@ -1,6 +1,6 @@
-import { User, InsertUser, Product, CartItem, Brand, Category, DEFAULT_BRANDS, DEFAULT_CATEGORIES } from "@shared/schema";
-import { db, users, brands, categories, products, cartItems } from "./db";
-import { eq } from "drizzle-orm";
+import { User, InsertUser, Product, CartItem, Brand, Category, DEFAULT_BRANDS, DEFAULT_CATEGORIES, Review } from "@shared/schema";
+import { db, users, brands, categories, products, cartItems, reviews } from "./db";
+import { eq, desc } from "drizzle-orm";
 import session from "express-session";
 import connectPg from "connect-pg-simple";
 import { pool } from "./db";
@@ -37,6 +37,10 @@ export interface IStorage {
   addToCart(userId: number, productId: number, quantity: number): Promise<CartItem>;
   updateCartQuantity(id: number, quantity: number): Promise<CartItem>;
   removeFromCart(id: number): Promise<void>;
+
+  // Review operations
+  getProductReviews(productId: number): Promise<Review[]>;
+  createReview(review: Omit<Review, "id" | "createdAt">): Promise<Review>;
 
   sessionStore: session.Store;
 }
@@ -217,6 +221,20 @@ export class DatabaseStorage implements IStorage {
 
   async removeFromCart(id: number): Promise<void> {
     await db.delete(cartItems).where(eq(cartItems.id, id));
+  }
+
+  // Review operations
+  async getProductReviews(productId: number): Promise<Review[]> {
+    return await db
+      .select()
+      .from(reviews)
+      .where(eq(reviews.productId, productId))
+      .orderBy(desc(reviews.createdAt));
+  }
+
+  async createReview(review: Omit<Review, "id" | "createdAt">): Promise<Review> {
+    const [created] = await db.insert(reviews).values(review).returning();
+    return created;
   }
 }
 

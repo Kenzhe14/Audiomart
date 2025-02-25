@@ -13,6 +13,8 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
+import ProductReviews from "./product-reviews";
+import { ShareButtons } from "./share-buttons";
 
 export default function ProductCard({ product }: { product: Product }) {
   const { user } = useAuth();
@@ -46,7 +48,7 @@ export default function ProductCard({ product }: { product: Product }) {
   });
 
   return (
-    <Card className="flex flex-col h-full">
+    <Card className="flex flex-col h-full transition-all duration-300 hover:shadow-lg animate-in fade-in slide-in-from-bottom-5">
       <CardHeader className="flex-none">
         <div className="flex items-start justify-between">
           <div>
@@ -57,11 +59,17 @@ export default function ProductCard({ product }: { product: Product }) {
               <span className="text-xs font-mono">SKU: {product.sku}</span>
             </CardDescription>
           </div>
-          {category && (
-            <Badge variant="outline" className="text-xs">
-              {category.name}
-            </Badge>
-          )}
+          <div className="flex gap-2">
+            <ShareButtons
+              title={product.name}
+              url={window.location.origin + "/products/" + product.id}
+            />
+            {category && (
+              <Badge variant="outline" className="text-xs">
+                {category.name}
+              </Badge>
+            )}
+          </div>
         </div>
       </CardHeader>
       <CardContent className="flex-grow">
@@ -87,11 +95,15 @@ export default function ProductCard({ product }: { product: Product }) {
           <Button
             onClick={() => addToCartMutation.mutate()}
             disabled={addToCartMutation.isPending}
+            className="transition-transform hover:scale-105"
           >
             В корзину
           </Button>
         )}
       </CardFooter>
+      <div className="mt-6 px-6 pb-6">
+        <ProductReviews productId={product.id} />
+      </div>
     </Card>
   );
 }

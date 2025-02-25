@@ -7,6 +7,7 @@ import {
 } from "@/components/ui/navigation-menu";
 import { Button } from "@/components/ui/button";
 import { ShoppingCart, UserCircle } from "lucide-react";
+import { ThemeSwitcher } from "./theme-switcher";
 import Cart from "./cart";
 
 export default function Navbar() {
@@ -23,6 +24,10 @@ export default function Navbar() {
 
         <NavigationMenu>
           <NavigationMenuList className="gap-4">
+            <NavigationMenuItem>
+              <ThemeSwitcher />
+            </NavigationMenuItem>
+
             {user?.isAdmin && (
               <NavigationMenuItem>
                 <Link href="/admin/products">

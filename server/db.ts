@@ -20,5 +20,6 @@ export const {
   brands,
   categories,
   products,
-  cartItems
+  cartItems,
+  reviews
 } = schema;

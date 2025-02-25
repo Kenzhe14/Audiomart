@@ -3,6 +3,8 @@ import { createServer, type Server } from "http";
 import { setupAuth } from "./auth";
 import { storage } from "./storage";
 import { insertProductSchema } from "@shared/schema";
+import {insertReviewSchema} from "@shared/schema"; // Added import
+
 
 export async function registerRoutes(app: Express): Promise<Server> {
   setupAuth(app);
@@ -83,6 +85,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
     await storage.deleteProduct(parseInt(req.params.id));
     res.sendStatus(204);
   });
+
+  // Reviews
+  app.get("/api/products/:id/reviews", async (req, res) => {
+    const reviews = await storage.getProductReviews(parseInt(req.params.id));
+    res.json(reviews);
+  });
+
+  app.post("/api/products/:id/reviews", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+
+    const parsed = insertReviewSchema.safeParse(req.body);
+    if (!parsed.success) return res.status(400).json(parsed.error);
+
+    const review = await storage.createReview({
+      ...parsed.data,
+      userId: req.user.id,
+      productId: parseInt(req.params.id),
+    });
+    res.status(201).json(review);
+  });
+
 
   // Cart
   app.get("/api/cart", async (req, res) => {

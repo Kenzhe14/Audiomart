@@ -1,4 +1,4 @@
-import { pgTable, text, serial, integer, boolean, doublePrecision } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, boolean, doublePrecision, timestamp } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -41,6 +41,15 @@ export const cartItems = pgTable("cart_items", {
   quantity: integer("quantity").notNull().default(1)
 });
 
+export const reviews = pgTable("reviews", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull(),
+  productId: integer("product_id").notNull(),
+  rating: integer("rating").notNull(),
+  comment: text("comment"),
+  createdAt: timestamp("created_at").defaultNow().notNull()
+});
+
 export const insertUserSchema = createInsertSchema(users).pick({
   username: true,
   password: true
@@ -51,12 +60,18 @@ export const insertCategorySchema = createInsertSchema(categories);
 export const insertProductSchema = createInsertSchema(products);
 export const insertCartItemSchema = createInsertSchema(cartItems);
 
+export const insertReviewSchema = createInsertSchema(reviews).extend({
+  rating: z.number().min(1).max(5)
+});
+
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
 export type Brand = typeof brands.$inferSelect;
 export type Category = typeof categories.$inferSelect;
 export type Product = typeof products.$inferSelect;
 export type CartItem = typeof cartItems.$inferSelect;
+export type Review = typeof reviews.$inferSelect;
+export type InsertReview = z.infer<typeof insertReviewSchema>;
 
 // Предустановленные категории аудиотехники
 export const DEFAULT_CATEGORIES = [
