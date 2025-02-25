@@ -1,6 +1,4 @@
 import { Express, Request, Response, NextFunction } from "express";
-import { scrypt, randomBytes, timingSafeEqual } from "crypto";
-import { promisify } from "util";
 import { storage } from "./storage";
 import { User as SelectUser } from "@shared/schema";
 import jwt from "jsonwebtoken";
@@ -13,22 +11,6 @@ declare global {
   }
 }
 
-const scryptAsync = promisify(scrypt);
-
-async function hashPassword(password: string) {
-  const salt = randomBytes(16).toString("hex");
-  const buf = (await scryptAsync(password, salt, 64)) as Buffer;
-  return `${buf.toString("hex")}.${salt}`;
-}
-
-async function comparePasswords(supplied: string, stored: string) {
-  if (!stored.includes('.')) return supplied === stored; // Для нехешированного пароля админа
-  const [hashed, salt] = stored.split(".");
-  const hashedBuf = Buffer.from(hashed, "hex");
-  const suppliedBuf = (await scryptAsync(supplied, salt, 64)) as Buffer;
-  return timingSafeEqual(hashedBuf, suppliedBuf);
-}
-
 function generateToken(user: SelectUser) {
   return jwt.sign(
     { id: user.id, username: user.username, isAdmin: user.isAdmin },
@@ -37,7 +19,7 @@ function generateToken(user: SelectUser) {
   );
 }
 
-async function authenticateToken(req: Request, res: Response, next: NextFunction) {
+function authenticateToken(req: Request, res: Response, next: NextFunction) {
   const authHeader = req.headers['authorization'];
   const token = authHeader && authHeader.split(' ')[1];
 
@@ -55,30 +37,6 @@ async function authenticateToken(req: Request, res: Response, next: NextFunction
 }
 
 export function setupAuth(app: Express) {
-  app.post("/api/register", async (req: Request, res: Response) => {
-    try {
-      console.log('Register attempt:', req.body.username);
-      const existingUser = await storage.getUserByUsername(req.body.username);
-      if (existingUser) {
-        console.log('Register failed: Username exists -', req.body.username);
-        return res.status(400).json({ message: "Username already exists" });
-      }
-
-      const hashedPassword = await hashPassword(req.body.password);
-      const user = await storage.createUser({
-        ...req.body,
-        password: hashedPassword,
-      });
-
-      const token = generateToken(user);
-      console.log('Register success:', user.username);
-      res.status(201).json({ user, token });
-    } catch (error) {
-      console.error('Register error:', error);
-      res.status(500).json({ message: "Internal server error" });
-    }
-  });
-
   app.post("/api/login", async (req: Request, res: Response) => {
     try {
       const { username, password } = req.body;
@@ -90,15 +48,8 @@ export function setupAuth(app: Express) {
         return res.status(401).json({ message: "Invalid credentials" });
       }
 
-      // Специальная проверка для админа
-      if (username === 'admin' && password === 'admin123') {
-        console.log('Admin login successful');
-        const token = generateToken(user);
-        return res.json({ user, token });
-      }
-
-      const isValid = await comparePasswords(password, user.password);
-      if (!isValid) {
+      // Простая проверка пароля
+      if (password !== user.password) {
         console.log('Login failed: Invalid password -', username);
         return res.status(401).json({ message: "Invalid credentials" });
       }
@@ -108,6 +59,29 @@ export function setupAuth(app: Express) {
       res.json({ user, token });
     } catch (error) {
       console.error('Login error:', error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  app.post("/api/register", async (req: Request, res: Response) => {
+    try {
+      console.log('Register attempt:', req.body.username);
+      const existingUser = await storage.getUserByUsername(req.body.username);
+      if (existingUser) {
+        console.log('Register failed: Username exists -', req.body.username);
+        return res.status(400).json({ message: "Username already exists" });
+      }
+
+      const user = await storage.createUser({
+        ...req.body,
+        password: req.body.password, // Сохраняем пароль как есть
+      });
+
+      const token = generateToken(user);
+      console.log('Register success:', user.username);
+      res.status(201).json({ user, token });
+    } catch (error) {
+      console.error('Register error:', error);
       res.status(500).json({ message: "Internal server error" });
     }
   });
