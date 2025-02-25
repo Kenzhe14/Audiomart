@@ -13,12 +13,19 @@ console.log('Initializing database connection...');
 
 const pool = new Pool({ 
   connectionString: process.env.DATABASE_URL,
-  connectionTimeoutMillis: 5000
+  connectionTimeoutMillis: 5000,
+  max: 10, // Максимальное количество соединений в пуле
+  idleTimeoutMillis: 30000, // Время ожидания неактивного соединения
+  keepAlive: true // Поддерживать соединение активным
 });
 
 pool.on('error', (err) => {
   console.error('Unexpected error on idle client', err);
   process.exit(-1);
+});
+
+pool.on('connect', () => {
+  console.log('New client connected to the pool');
 });
 
 const db = drizzle(pool, { schema });

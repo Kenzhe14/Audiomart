@@ -19,6 +19,7 @@ export const insertUserSchema = createInsertSchema(users).pick({
 }).extend({
   phone: z.string()
     .regex(phoneRegex, "Номер телефона должен быть в формате +7XXXXXXXXXX")
+    .refine((val) => val.length === 12, "Номер телефона должен содержать 10 цифр после +7")
 });
 
 export const brands = pgTable("brands", {

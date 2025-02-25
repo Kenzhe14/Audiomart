@@ -99,25 +99,33 @@ class DatabaseStorage {
 
   // User operations
   async getUser(id: number): Promise<User | undefined> {
+    console.log('Getting user by id:', id);
     const [user] = await db.select().from(schema.users).where(eq(schema.users.id, id));
+    console.log('Found user:', user?.username);
     return user;
   }
 
   async getUserByUsername(username: string): Promise<User | undefined> {
+    console.log('Getting user by username:', username);
     const [user] = await db.select().from(schema.users).where(eq(schema.users.username, username));
+    console.log('Found user:', user?.username);
     return user;
   }
 
   async createUser(user: InsertUser): Promise<User> {
+    console.log('Creating new user:', user.username);
     const [created] = await db.insert(schema.users).values(user).returning();
+    console.log('User created:', created.username);
     return created;
   }
 
   async updateUserPassword(id: number, password: string): Promise<void> { 
+    console.log('Updating password for user id:', id);
     await db
       .update(schema.users)
       .set({ password })
       .where(eq(schema.users.id, id));
+    console.log('Password updated successfully');
   }
 
   // Brand operations
