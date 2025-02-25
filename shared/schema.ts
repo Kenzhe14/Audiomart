@@ -34,6 +34,25 @@ export const products = pgTable("products", {
   stock: integer("stock").notNull().default(0)
 });
 
+export const orders = pgTable("orders", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull(),
+  status: text("status").notNull().default("pending"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  totalAmount: doublePrecision("total_amount").notNull(),
+  shippingAddress: text("shipping_address"),
+  contactPhone: text("contact_phone")
+});
+
+export const orderItems = pgTable("order_items", {
+  id: serial("id").primaryKey(),
+  orderId: integer("order_id").notNull(),
+  productId: integer("product_id").notNull(),
+  quantity: integer("quantity").notNull(),
+  priceAtTime: doublePrecision("price_at_time").notNull()
+});
+
 export const cartItems = pgTable("cart_items", {
   id: serial("id").primaryKey(),
   userId: integer("user_id").notNull(),
@@ -59,9 +78,18 @@ export const insertBrandSchema = createInsertSchema(brands);
 export const insertCategorySchema = createInsertSchema(categories);
 export const insertProductSchema = createInsertSchema(products);
 export const insertCartItemSchema = createInsertSchema(cartItems);
-
 export const insertReviewSchema = createInsertSchema(reviews).extend({
   rating: z.number().min(1).max(5)
+});
+
+export const insertOrderSchema = createInsertSchema(orders).omit({ 
+  id: true,
+  createdAt: true,
+  updatedAt: true 
+});
+
+export const insertOrderItemSchema = createInsertSchema(orderItems).omit({ 
+  id: true 
 });
 
 export type InsertUser = z.infer<typeof insertUserSchema>;
@@ -71,9 +99,12 @@ export type Category = typeof categories.$inferSelect;
 export type Product = typeof products.$inferSelect;
 export type CartItem = typeof cartItems.$inferSelect;
 export type Review = typeof reviews.$inferSelect;
+export type Order = typeof orders.$inferSelect;
+export type OrderItem = typeof orderItems.$inferSelect;
 export type InsertReview = z.infer<typeof insertReviewSchema>;
+export type InsertOrder = z.infer<typeof insertOrderSchema>;
+export type InsertOrderItem = z.infer<typeof insertOrderItemSchema>;
 
-// Предустановленные категории аудиотехники
 export const DEFAULT_CATEGORIES = [
   { name: "Наушники", subcategories: [
     "Беспроводные наушники",
@@ -105,7 +136,6 @@ export const DEFAULT_CATEGORIES = [
   ]}
 ];
 
-// Предустановленные бренды
 export const DEFAULT_BRANDS = [
   "Sony",
   "Audio-Technica",

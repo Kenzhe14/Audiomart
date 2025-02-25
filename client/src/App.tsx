@@ -9,6 +9,8 @@ import NotFound from "@/pages/not-found";
 import HomePage from "@/pages/home-page";
 import AuthPage from "@/pages/auth-page";
 import AdminProducts from "@/pages/admin/products";
+import AdminOrders from "@/pages/admin/orders";
+import OrdersPage from "@/pages/orders";
 import Navbar from "@/components/ui/navbar";
 import Footer from "@/components/ui/footer";
 
@@ -17,7 +19,9 @@ function Router() {
     <Switch>
       <Route path="/" component={HomePage} />
       <Route path="/auth" component={AuthPage} />
+      <ProtectedRoute path="/orders" component={OrdersPage} />
       <ProtectedRoute path="/admin/products" component={AdminProducts} />
+      <ProtectedRoute path="/admin/orders" component={AdminOrders} />
       <Route component={NotFound} />
     </Switch>
   );

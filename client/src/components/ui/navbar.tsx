@@ -29,9 +29,24 @@ export default function Navbar() {
             </NavigationMenuItem>
 
             {user?.isAdmin && (
+              <>
+                <NavigationMenuItem>
+                  <Link href="/admin/products">
+                    <Button variant="ghost">Товары</Button>
+                  </Link>
+                </NavigationMenuItem>
+                <NavigationMenuItem>
+                  <Link href="/admin/orders">
+                    <Button variant="ghost">Заказы</Button>
+                  </Link>
+                </NavigationMenuItem>
+              </>
+            )}
+
+            {user && (
               <NavigationMenuItem>
-                <Link href="/admin/products">
-                  <Button variant="ghost">Admin</Button>
+                <Link href="/orders">
+                  <Button variant="ghost">История заказов</Button>
                 </Link>
               </NavigationMenuItem>
             )}
@@ -50,12 +65,12 @@ export default function Navbar() {
                     onClick={() => logoutMutation.mutate()}
                     disabled={logoutMutation.isPending}
                   >
-                    Logout
+                    Выход
                   </Button>
                 </div>
               ) : (
                 <Link href="/auth">
-                  <Button>Login</Button>
+                  <Button>Войти</Button>
                 </Link>
               )}
             </NavigationMenuItem>

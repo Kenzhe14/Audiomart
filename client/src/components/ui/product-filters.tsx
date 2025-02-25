@@ -7,7 +7,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Slider } from "@/components/ui/slider";
+import { Input } from "@/components/ui/input";
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -31,6 +31,8 @@ export default function ProductFilters({
   className = "",
 }: ProductFiltersProps) {
   const [filters, setFilters] = useState<Filters>({});
+  const [minPriceInput, setMinPriceInput] = useState("");
+  const [maxPriceInput, setMaxPriceInput] = useState("");
 
   const { data: brands = [] } = useQuery<Brand[]>({
     queryKey: ["/api/brands"],
@@ -50,6 +52,19 @@ export default function ProductFilters({
     const { [key]: _, ...rest } = filters;
     setFilters(rest);
     onFiltersChange(rest);
+    if (key === 'minPrice') setMinPriceInput("");
+    if (key === 'maxPrice') setMaxPriceInput("");
+  };
+
+  const handlePriceInput = (value: string, type: 'min' | 'max') => {
+    const numValue = value === "" ? "" : parseFloat(value);
+    if (type === 'min') {
+      setMinPriceInput(value);
+      updateFilters({ minPrice: numValue === "" ? undefined : numValue });
+    } else {
+      setMaxPriceInput(value);
+      updateFilters({ maxPrice: numValue === "" ? undefined : numValue });
+    }
   };
 
   return (
@@ -128,14 +143,21 @@ export default function ProductFilters({
 
         <div className="space-y-2">
           <label className="text-sm font-medium">Диапазон цен</label>
-          <div className="pt-4">
-            <Slider
-              defaultValue={[0, 1000000]}
-              max={1000000}
-              step={1000}
-              onValueChange={([min, max]) =>
-                updateFilters({ minPrice: min, maxPrice: max })
-              }
+          <div className="flex items-center gap-2">
+            <Input
+              type="number"
+              placeholder="От"
+              value={minPriceInput}
+              onChange={(e) => handlePriceInput(e.target.value, 'min')}
+              className="w-full"
+            />
+            <span>-</span>
+            <Input
+              type="number"
+              placeholder="До"
+              value={maxPriceInput}
+              onChange={(e) => handlePriceInput(e.target.value, 'max')}
+              className="w-full"
             />
           </div>
           {(filters.minPrice || filters.maxPrice) && (

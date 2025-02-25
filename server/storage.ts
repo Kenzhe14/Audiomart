@@ -1,4 +1,4 @@
-import { User, InsertUser, Product, CartItem, Brand, Category, DEFAULT_BRANDS, DEFAULT_CATEGORIES, Review } from "@shared/schema";
+import { User, InsertUser, Product, CartItem, Brand, Category, DEFAULT_BRANDS, DEFAULT_CATEGORIES, Review, Order, InsertOrder, OrderItem, InsertOrderItem } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc } from "drizzle-orm";
 import session from "express-session";
@@ -280,6 +280,48 @@ class DatabaseStorage {
       ...product,
       reviews
     };
+  }
+
+  // Order operations
+  async getOrders(userId: number): Promise<Order[]> {
+    return await db
+      .select()
+      .from(schema.orders)
+      .where(eq(schema.orders.userId, userId))
+      .orderBy(desc(schema.orders.createdAt));
+  }
+
+  async getAllOrders(): Promise<Order[]> {
+    return await db
+      .select()
+      .from(schema.orders)
+      .orderBy(desc(schema.orders.createdAt));
+  }
+
+  async createOrder(order: InsertOrder): Promise<Order> {
+    const [created] = await db.insert(schema.orders).values(order).returning();
+    return created;
+  }
+
+  async updateOrderStatus(id: number, status: string): Promise<Order> {
+    const [updated] = await db
+      .update(schema.orders)
+      .set({ status, updatedAt: new Date() })
+      .where(eq(schema.orders.id, id))
+      .returning();
+    return updated;
+  }
+
+  async createOrderItem(item: InsertOrderItem): Promise<OrderItem> {
+    const [created] = await db.insert(schema.orderItems).values(item).returning();
+    return created;
+  }
+
+  async getOrderItems(orderId: number): Promise<OrderItem[]> {
+    return await db
+      .select()
+      .from(schema.orderItems)
+      .where(eq(schema.orderItems.orderId, orderId));
   }
 }
 

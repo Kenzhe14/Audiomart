@@ -160,6 +160,90 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.sendStatus(204);
   });
 
+  // Добавляем маршруты для заказов
+  app.get("/api/orders", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+
+    const orders = await storage.getOrders(req.user.id);
+    res.json(orders);
+  });
+
+  app.get("/api/admin/orders", async (req, res) => {
+    if (!req.isAuthenticated() || !req.user.isAdmin) {
+      return res.sendStatus(403);
+    }
+
+    const orders = await storage.getAllOrders();
+    const ordersWithDetails = await Promise.all(
+      orders.map(async (order) => {
+        const items = await storage.getOrderItems(order.id);
+        const itemsWithProducts = await Promise.all(
+          items.map(async (item) => {
+            const product = await storage.getProduct(item.productId);
+            return { ...item, product };
+          })
+        );
+        return { ...order, items: itemsWithProducts };
+      })
+    );
+    res.json(ordersWithDetails);
+  });
+
+  app.post("/api/orders", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+
+    const cartItems = await storage.getCartItems(req.user.id);
+    if (cartItems.length === 0) return res.sendStatus(400);
+
+    // Вычисляем общую сумму
+    let totalAmount = 0;
+    for (const item of cartItems) {
+      const product = await storage.getProduct(item.productId);
+      totalAmount += product.price * item.quantity;
+    }
+
+    // Создаем заказ
+    const order = await storage.createOrder({
+      userId: req.user.id,
+      totalAmount,
+      status: 'pending',
+      shippingAddress: req.body.shippingAddress,
+      contactPhone: req.body.contactPhone
+    });
+
+    // Создаем элементы заказа
+    await Promise.all(
+      cartItems.map(async (item) => {
+        const product = await storage.getProduct(item.productId);
+        await storage.createOrderItem({
+          orderId: order.id,
+          productId: item.productId,
+          quantity: item.quantity,
+          priceAtTime: product.price
+        });
+      })
+    );
+
+    // Очищаем корзину
+    await Promise.all(
+      cartItems.map(item => storage.removeFromCart(item.id))
+    );
+
+    res.status(201).json(order);
+  });
+
+  app.patch("/api/admin/orders/:id", async (req, res) => {
+    if (!req.isAuthenticated() || !req.user.isAdmin) {
+      return res.sendStatus(403);
+    }
+
+    const order = await storage.updateOrderStatus(
+      parseInt(req.params.id),
+      req.body.status
+    );
+    res.json(order);
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
