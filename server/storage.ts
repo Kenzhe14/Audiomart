@@ -16,8 +16,9 @@ class DatabaseStorage {
     try {
       this.sessionStore = new PostgresSessionStore({
         pool,
-        createTableIfMissing: true,
-        tableName: 'user_sessions', 
+        // Отключаем автоматическое создание таблицы
+        createTableIfMissing: false,
+        tableName: 'user_sessions',
         pruneSessionInterval: 60
       });
       console.log('Session store initialized');
