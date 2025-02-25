@@ -20,7 +20,8 @@ import { View, ImageIcon } from "lucide-react";
 import { SafeSuspense } from "./safe-suspense";
 import { ErrorBoundary } from "./error-boundary";
 
-const ProductView3D = lazy(() => import("./product-view-3d").then(mod => ({ default: mod.ProductView3D })));
+// Lazy load the 3D viewer
+const ProductView3D = lazy(() => import("./product-view-3d").then(mod => mod));
 
 export default function ProductCard({ product }: { product: Product }) {
   const { user } = useAuth();
@@ -94,7 +95,15 @@ export default function ProductCard({ product }: { product: Product }) {
       <CardContent className="flex-grow">
         <div className="aspect-square overflow-hidden rounded-md mb-4">
           {show3D ? (
-            <ErrorBoundary>
+            <ErrorBoundary
+              fallback={
+                <div className="flex items-center justify-center h-full bg-muted">
+                  <p className="text-sm text-muted-foreground">
+                    Не удалось загрузить 3D просмотр
+                  </p>
+                </div>
+              }
+            >
               <SafeSuspense>
                 <ProductView3D />
               </SafeSuspense>
