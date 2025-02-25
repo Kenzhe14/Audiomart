@@ -15,6 +15,7 @@ export interface IStorage {
   getUser(id: number): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
+  updateUserPassword(id: number, password: string): Promise<void>; // Added method signature
 
   // Brand operations
   getBrands(): Promise<Brand[]>;
@@ -148,6 +149,13 @@ export class DatabaseStorage implements IStorage {
   async createUser(user: InsertUser): Promise<User> {
     const [created] = await db.insert(schema.users).values(user).returning();
     return created;
+  }
+
+  async updateUserPassword(id: number, password: string): Promise<void> { // Added method implementation
+    await db
+      .update(schema.users)
+      .set({ password })
+      .where(eq(schema.users.id, id));
   }
 
   // Brand operations

@@ -10,6 +10,7 @@ import HomePage from "@/pages/home-page";
 import AuthPage from "@/pages/auth-page";
 import AdminProducts from "@/pages/admin/products";
 import Navbar from "@/components/ui/navbar";
+import Footer from "@/components/ui/footer";
 
 function Router() {
   return (
@@ -27,11 +28,14 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <ThemeProvider>
         <AuthProvider>
-          <Navbar />
-          <main className="container mx-auto px-4 py-8 animate-in fade-in duration-500">
-            <Router />
-          </main>
-          <Toaster />
+          <div className="min-h-screen flex flex-col">
+            <Navbar />
+            <main className="container mx-auto px-4 py-8 flex-grow animate-in fade-in duration-500">
+              <Router />
+            </main>
+            <Footer />
+            <Toaster />
+          </div>
         </AuthProvider>
       </ThemeProvider>
     </QueryClientProvider>

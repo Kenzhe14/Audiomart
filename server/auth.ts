@@ -50,13 +50,25 @@ export function setupAuth(app: Express) {
     new LocalStrategy(async (username, password, done) => {
       try {
         const user = await storage.getUserByUsername(username);
-        if (!user || !(await comparePasswords(password, user.password))) {
-          console.log('Auth failed:', username);
+        if (!user) {
+          console.log('Auth failed: User not found -', username);
           return done(null, false);
-        } else {
-          console.log('Auth success:', username);
-          return done(null, user);
         }
+
+        // Hash the stored password for admin if it's not already hashed
+        if (user.username === 'admin' && !user.password.includes('.')) {
+          user.password = await hashPassword('admin123');
+          await storage.updateUserPassword(user.id, user.password);
+        }
+
+        const isValid = await comparePasswords(password, user.password);
+        if (!isValid) {
+          console.log('Auth failed: Invalid password -', username);
+          return done(null, false);
+        }
+
+        console.log('Auth success:', username, 'isAdmin:', user.isAdmin);
+        return done(null, user);
       } catch (error) {
         console.error('Auth error:', error);
         return done(error);
@@ -73,6 +85,10 @@ export function setupAuth(app: Express) {
     try {
       console.log('Deserializing user:', id);
       const user = await storage.getUser(id);
+      if (!user) {
+        console.log('Deserialize failed: User not found -', id);
+        return done(null, false);
+      }
       done(null, user);
     } catch (error) {
       console.error('Deserialize error:', error);

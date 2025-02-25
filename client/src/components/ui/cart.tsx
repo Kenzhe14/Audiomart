@@ -35,6 +35,15 @@ export default function Cart() {
     },
   });
 
+  const updateQuantityMutation = useMutation({
+    mutationFn: async ({ id, quantity }: { id: number; quantity: number }) => {
+      await apiRequest("PATCH", `/api/cart/${id}`, { quantity });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/cart"] });
+    },
+  });
+
   if (!user) return null;
 
   const cartProducts = cartItems.map((item) => ({
@@ -61,7 +70,7 @@ export default function Cart() {
       </SheetTrigger>
       <SheetContent>
         <SheetHeader>
-          <SheetTitle>Shopping Cart</SheetTitle>
+          <SheetTitle>Корзина</SheetTitle>
         </SheetHeader>
 
         <div className="mt-8 space-y-4">
@@ -73,27 +82,59 @@ export default function Cart() {
               <div>
                 <p className="font-medium">{item.product.name}</p>
                 <p className="text-sm text-muted-foreground">
-                  ${item.product.price} x {item.quantity}
+                  {item.product.price.toLocaleString('ru-RU')} ₸
                 </p>
               </div>
-              <Button
-                variant="destructive"
-                size="sm"
-                onClick={() => removeFromCartMutation.mutate(item.id)}
-                disabled={removeFromCartMutation.isPending}
-              >
-                Remove
-              </Button>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={() => 
+                    updateQuantityMutation.mutate({
+                      id: item.id,
+                      quantity: Math.max(1, item.quantity - 1)
+                    })
+                  }
+                  disabled={updateQuantityMutation.isPending}
+                >
+                  -
+                </Button>
+                <span className="min-w-[2rem] text-center">{item.quantity}</span>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={() => 
+                    updateQuantityMutation.mutate({
+                      id: item.id,
+                      quantity: item.quantity + 1
+                    })
+                  }
+                  disabled={updateQuantityMutation.isPending}
+                >
+                  +
+                </Button>
+                <Button
+                  variant="destructive"
+                  size="icon"
+                  onClick={() => removeFromCartMutation.mutate(item.id)}
+                  disabled={removeFromCartMutation.isPending}
+                >
+                  ×
+                </Button>
+              </div>
             </div>
           ))}
 
           {cartProducts.length === 0 ? (
-            <p className="text-center text-muted-foreground">Cart is empty</p>
+            <p className="text-center text-muted-foreground">Корзина пуста</p>
           ) : (
             <div className="pt-4 border-t">
               <p className="text-lg font-bold">
-                Total: ${total.toFixed(2)}
+                Итого: {total.toLocaleString('ru-RU')} ₸
               </p>
+              <Button className="w-full mt-4">
+                Оформить заказ
+              </Button>
             </div>
           )}
         </div>
