@@ -1,0 +1,55 @@
+npm audit fix --force
+npm warn using --force Recommended protections disabled.
+npm warn audit Updating drizzle-kit to 0.19.1, which is a SemVer major change.
+npm warn ERESOLVE overriding peer dependency
+npm warn While resolving: @monogrid/gainmap-js@3.1.0
+npm warn Found: three@0.152.2
+npm warn node_modules/three
+npm warn   peer three@">=0.126" from @react-spring/three@9.7.5
+npm warn   node_modules/@react-spring/three
+npm warn     @react-spring/three@"~9.7.5" from @react-three/drei@9.122.0
+npm warn     node_modules/@react-three/drei
+npm warn   10 more (@react-three/drei, @react-three/fiber, ...)
+npm warn
+npm warn Could not resolve dependency:
+npm warn peer three@">= 0.159.0" from @monogrid/gainmap-js@3.1.0
+npm warn node_modules/@react-three/drei/node_modules/@monogrid/gainmap-js
+npm warn   @monogrid/gainmap-js@"^3.0.6" from @react-three/drei@9.122.0
+npm warn   node_modules/@react-three/drei
+npm warn
+npm warn Conflicting peer dependency: three@0.173.0
+npm warn node_modules/three
+npm warn   peer three@">= 0.159.0" from @monogrid/gainmap-js@3.1.0
+npm warn   node_modules/@react-three/drei/node_modules/@monogrid/gainmap-js
+npm warn     @monogrid/gainmap-js@"^3.0.6" from @react-three/drei@9.122.0
+npm warn     node_modules/@react-three/drei
+npm warn deprecated @esbuild-kit/esm-loader@2.6.5: Merged into tsx: https://tsx.is
+npm warn deprecated @esbuild-kit/core-utils@3.3.2: Merged into tsx: https://tsx.is
+
+added 7 packages, removed 3 packages, changed 1 package, and audited 570 packages in 1m
+
+65 packages are looking for funding
+  run `npm fund` for details
+
+# npm audit report
+
+esbuild  <=0.24.2
+Severity: moderate
+esbuild enables any website to send any requests to the development server and read the response - https://github.com/advisories/GHSA-67mh-4wv8-2f99
+fix available via `npm audit fix --force`
+Will install drizzle-kit@0.18.1, which is a breaking change
+node_modules/@esbuild-kit/core-utils/node_modules/esbuild
+  @esbuild-kit/core-utils  *
+  Depends on vulnerable versions of esbuild
+  node_modules/@esbuild-kit/core-utils
+    @esbuild-kit/esm-loader  *
+    Depends on vulnerable versions of @esbuild-kit/core-utils
+    node_modules/@esbuild-kit/esm-loader
+      drizzle-kit  0.17.5-6b7793f - 0.17.5-e5944eb || 0.18.1-065de38 - 0.18.1-f3800bf || >=0.19.0-07024c4
+      Depends on vulnerable versions of @esbuild-kit/esm-loader
+      node_modules/drizzle-kit
+
+4 moderate severity vulnerabilities
+
+To address all issues (including breaking changes), run:
+  npm audit fix --force
