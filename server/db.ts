@@ -11,10 +11,12 @@ if (!process.env.DATABASE_URL) {
   );
 }
 
+console.log('Initializing database connection...');
+
 export const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 export const db = drizzle(pool, { schema });
 
-// Export tables for use in storage.ts
+// Export schema for use in other files
 export const {
   users,
   brands,
@@ -23,3 +25,5 @@ export const {
   cartItems,
   reviews
 } = schema;
+
+console.log('Database connection initialized successfully');

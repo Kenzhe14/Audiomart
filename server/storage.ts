@@ -10,7 +10,7 @@ const PostgresSessionStore = connectPg(session);
 
 export interface IStorage {
   init(): Promise<void>;
-
+  sessionStore: session.Store;
   // User operations
   getUser(id: number): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
@@ -45,22 +45,22 @@ export interface IStorage {
   createReview(review: Omit<Review, "id" | "createdAt">): Promise<Review>;
   getProductsWithReviews(): Promise<(Product & { reviews: Review[] })[]>;
   getProductWithReviews(id: number): Promise<(Product & { reviews: Review[] }) | undefined>;
-
-  sessionStore: session.Store;
 }
 
 export class DatabaseStorage implements IStorage {
   readonly sessionStore: session.Store;
 
   constructor() {
+    console.log('Initializing DatabaseStorage...');
     this.sessionStore = new PostgresSessionStore({
       pool,
       createTableIfMissing: true,
     });
+    console.log('DatabaseStorage initialized');
   }
 
   async init() {
-    console.log('Начало инициализации хранилища...');
+    console.log('Starting storage initialization...');
 
     try {
       // Параллельная инициализация для ускорения запуска
@@ -70,19 +70,19 @@ export class DatabaseStorage implements IStorage {
         this.initAdminIfNeeded()
       ]);
 
-      console.log('Инициализация хранилища завершена успешно');
+      console.log('Storage initialization completed successfully');
     } catch (error) {
-      console.error('Ошибка при инициализации хранилища:', error);
+      console.error('Error during storage initialization:', error);
       throw error;
     }
   }
 
   private async initAdminIfNeeded() {
-    console.log('Проверка наличия администратора...');
+    console.log('Checking for admin user...');
     const admin = await this.getUserByUsername("admin");
 
     if (!admin) {
-      console.log('Создание аккаунта администратора...');
+      console.log('Creating admin account...');
       await db.insert(schema.users).values({
         username: "admin",
         password: "admin123", // В реальном приложении нужно хешировать
@@ -92,11 +92,11 @@ export class DatabaseStorage implements IStorage {
   }
 
   private async initBrandsIfNeeded() {
-    console.log('Проверка наличия брендов...');
+    console.log('Checking for brands...');
     const existingBrands = await db.select().from(schema.brands);
 
     if (existingBrands.length === 0) {
-      console.log('Создание базовых брендов...');
+      console.log('Creating default brands...');
       await Promise.all(
         DEFAULT_BRANDS.map(brandName =>
           db.insert(schema.brands).values({
@@ -109,11 +109,11 @@ export class DatabaseStorage implements IStorage {
   }
 
   private async initCategoriesIfNeeded() {
-    console.log('Проверка наличия категорий...');
+    console.log('Checking for categories...');
     const existingCategories = await db.select().from(schema.categories);
 
     if (existingCategories.length === 0) {
-      console.log('Создание базовых категорий...');
+      console.log('Creating default categories...');
       for (const category of DEFAULT_CATEGORIES) {
         const [parentCategory] = await db.insert(schema.categories)
           .values({
@@ -261,13 +261,31 @@ export class DatabaseStorage implements IStorage {
 
   async getProductsWithReviews(): Promise<(Product & { reviews: Review[] })[]> {
     try {
-      // Получаем все продукты и обзоры за один запрос
+      // Выполняем запросы параллельно для ускорения
       const [products, allReviews] = await Promise.all([
-        db.select().from(schema.products),
-        db.select().from(schema.reviews).orderBy(desc(schema.reviews.createdAt))
+        db.select({
+          id: schema.products.id,
+          name: schema.products.name,
+          price: schema.products.price,
+          description: schema.products.description,
+          imageUrl: schema.products.imageUrl,
+          categoryId: schema.products.categoryId,
+          brandId: schema.products.brandId,
+          stock: schema.products.stock,
+          sku: schema.products.sku
+        }).from(schema.products),
+        db.select({
+          id: schema.reviews.id,
+          productId: schema.reviews.productId,
+          rating: schema.reviews.rating,
+          comment: schema.reviews.comment,
+          createdAt: schema.reviews.createdAt
+        })
+          .from(schema.reviews)
+          .orderBy(desc(schema.reviews.createdAt))
       ]);
 
-      // Создаем карту обзоров по productId для быстрого доступа
+      // Используем Map для быстрого доступа к отзывам
       const reviewsByProductId = new Map<number, Review[]>();
       allReviews.forEach(review => {
         const reviews = reviewsByProductId.get(review.productId) || [];
@@ -275,7 +293,6 @@ export class DatabaseStorage implements IStorage {
         reviewsByProductId.set(review.productId, reviews);
       });
 
-      // Объединяем продукты с их обзорами
       return products.map(product => ({
         ...product,
         reviews: reviewsByProductId.get(product.id) || []
@@ -307,15 +324,15 @@ export class DatabaseStorage implements IStorage {
   }
 }
 
+// Create storage instance
+console.log('Creating storage instance...');
 export const storage = new DatabaseStorage();
 
 // Initialize storage
-(async () => {
-  try {
-    await storage.init();
-    console.log('Storage initialized successfully');
-  } catch (error) {
+console.log('Starting storage initialization process...');
+storage.init()
+  .then(() => console.log('Storage initialized successfully'))
+  .catch(error => {
     console.error('Failed to initialize storage:', error);
     process.exit(1);
-  }
-})();
+  });
