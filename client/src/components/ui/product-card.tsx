@@ -18,6 +18,7 @@ import { ShareButtons } from "./share-buttons";
 import { lazy, Suspense, useState } from "react";
 import { View, ImageIcon } from "lucide-react";
 import { SafeSuspense } from "./safe-suspense";
+import { ErrorBoundary } from "./error-boundary";
 
 const ProductView3D = lazy(() => import("./product-view-3d").then(mod => ({ default: mod.ProductView3D })));
 
@@ -93,9 +94,11 @@ export default function ProductCard({ product }: { product: Product }) {
       <CardContent className="flex-grow">
         <div className="aspect-square overflow-hidden rounded-md mb-4">
           {show3D ? (
-            <SafeSuspense>
-              <ProductView3D />
-            </SafeSuspense>
+            <ErrorBoundary>
+              <SafeSuspense>
+                <ProductView3D />
+              </SafeSuspense>
+            </ErrorBoundary>
           ) : (
             <img
               src={product.imageUrl}

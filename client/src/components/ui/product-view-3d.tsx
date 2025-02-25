@@ -1,7 +1,7 @@
 import { useRef } from 'react';
 import * as THREE from 'three';
 import { Canvas, useFrame } from '@react-three/fiber';
-import { PerspectiveCamera, OrbitControls, Environment } from '@react-three/drei';
+import { PerspectiveCamera, OrbitControls } from '@react-three/drei';
 
 function Product3DModel() {
   const meshRef = useRef<THREE.Mesh>(null);
@@ -37,15 +37,6 @@ export function ProductView3D() {
           autoRotate
           autoRotateSpeed={4}
         />
-        <Environment preset="city" />
-        <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -1, 0]}>
-          <planeGeometry args={[50, 50]} />
-          <meshStandardMaterial 
-            color="#101010"
-            metalness={0.5}
-            roughness={0.8}
-          />
-        </mesh>
       </Canvas>
     </div>
   );
