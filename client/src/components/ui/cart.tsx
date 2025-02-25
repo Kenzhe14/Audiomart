@@ -12,10 +12,12 @@ import { CartItem, Product } from "@shared/schema";
 import { useAuth } from "@/hooks/use-auth";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useState } from "react";
+import { useLocation } from "wouter";
 
 export default function Cart() {
   const { user } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
+  const [, setLocation] = useLocation();
 
   const { data: cartItems = [], isLoading: isCartLoading } = useQuery<CartItem[]>({
     queryKey: ["/api/cart"],
@@ -66,6 +68,11 @@ export default function Cart() {
       </Button>
     );
   }
+
+  const handleCheckout = () => {
+    setIsOpen(false);
+    setLocation("/checkout");
+  };
 
   return (
     <Sheet open={isOpen} onOpenChange={setIsOpen}>
@@ -143,7 +150,10 @@ export default function Cart() {
               <p className="text-lg font-bold">
                 Итого: {total.toLocaleString('ru-RU')} ₸
               </p>
-              <Button className="w-full mt-4" onClick={() => setIsOpen(false)}>
+              <Button 
+                className="w-full mt-4" 
+                onClick={handleCheckout}
+              >
                 Оформить заказ
               </Button>
             </div>

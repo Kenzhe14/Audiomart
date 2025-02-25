@@ -12,6 +12,7 @@ import AdminProducts from "@/pages/admin/products";
 import AdminOrders from "@/pages/admin/orders";
 import OrdersPage from "@/pages/orders";
 import ProductPage from "@/pages/product-page";
+import CheckoutPage from "@/pages/checkout-page";
 import Navbar from "@/components/ui/navbar";
 import Footer from "@/components/ui/footer";
 
@@ -21,6 +22,7 @@ function Router() {
       <Route path="/" component={HomePage} />
       <Route path="/auth" component={AuthPage} />
       <Route path="/products/:id" component={ProductPage} />
+      <ProtectedRoute path="/checkout" component={CheckoutPage} />
       <ProtectedRoute path="/orders" component={OrdersPage} />
       <ProtectedRoute path="/admin/products" component={AdminProducts} />
       <ProtectedRoute path="/admin/orders" component={AdminOrders} />
