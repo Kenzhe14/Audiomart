@@ -8,46 +8,7 @@ import * as schema from "@shared/schema";
 
 const PostgresSessionStore = connectPg(session);
 
-export interface IStorage {
-  init(): Promise<void>;
-  sessionStore: session.Store;
-  // User operations
-  getUser(id: number): Promise<User | undefined>;
-  getUserByUsername(username: string): Promise<User | undefined>;
-  createUser(user: InsertUser): Promise<User>;
-  updateUserPassword(id: number, password: string): Promise<void>; // Added method signature
-
-  // Brand operations
-  getBrands(): Promise<Brand[]>;
-  getBrand(id: number): Promise<Brand | undefined>;
-  createBrand(brand: Omit<Brand, "id">): Promise<Brand>;
-
-  // Category operations
-  getCategories(): Promise<Category[]>;
-  getCategory(id: number): Promise<Category | undefined>;
-  createCategory(category: Omit<Category, "id">): Promise<Category>;
-
-  // Product operations
-  getProducts(): Promise<Product[]>;
-  getProduct(id: number): Promise<Product | undefined>;
-  createProduct(product: Omit<Product, "id">): Promise<Product>;
-  updateProduct(id: number, product: Partial<Product>): Promise<Product>;
-  deleteProduct(id: number): Promise<void>;
-
-  // Cart operations
-  getCartItems(userId: number): Promise<CartItem[]>;
-  addToCart(userId: number, productId: number, quantity: number): Promise<CartItem>;
-  updateCartQuantity(id: number, quantity: number): Promise<CartItem>;
-  removeFromCart(id: number): Promise<void>;
-
-  // Review operations
-  getProductReviews(productId: number): Promise<Review[]>;
-  createReview(review: Omit<Review, "id" | "createdAt">): Promise<Review>;
-  getProductsWithReviews(): Promise<(Product & { reviews: Review[] })[]>;
-  getProductWithReviews(id: number): Promise<(Product & { reviews: Review[] }) | undefined>;
-}
-
-export class DatabaseStorage implements IStorage {
+class DatabaseStorage {
   readonly sessionStore: session.Store;
 
   constructor() {
@@ -55,21 +16,19 @@ export class DatabaseStorage implements IStorage {
     this.sessionStore = new PostgresSessionStore({
       pool,
       createTableIfMissing: true,
+      tableName: 'sessions'
     });
     console.log('DatabaseStorage initialized');
   }
 
   async init() {
     console.log('Starting storage initialization...');
-
     try {
-      // Параллельная инициализация для ускорения запуска
       await Promise.all([
         this.initBrandsIfNeeded(),
         this.initCategoriesIfNeeded(),
         this.initAdminIfNeeded()
       ]);
-
       console.log('Storage initialization completed successfully');
     } catch (error) {
       console.error('Error during storage initialization:', error);
@@ -80,12 +39,11 @@ export class DatabaseStorage implements IStorage {
   private async initAdminIfNeeded() {
     console.log('Checking for admin user...');
     const admin = await this.getUserByUsername("admin");
-
     if (!admin) {
       console.log('Creating admin account...');
       await db.insert(schema.users).values({
         username: "admin",
-        password: "admin123", // В реальном приложении нужно хешировать
+        password: "admin123",
         isAdmin: true
       });
     }
@@ -94,7 +52,6 @@ export class DatabaseStorage implements IStorage {
   private async initBrandsIfNeeded() {
     console.log('Checking for brands...');
     const existingBrands = await db.select().from(schema.brands);
-
     if (existingBrands.length === 0) {
       console.log('Creating default brands...');
       await Promise.all(
@@ -111,7 +68,6 @@ export class DatabaseStorage implements IStorage {
   private async initCategoriesIfNeeded() {
     console.log('Checking for categories...');
     const existingCategories = await db.select().from(schema.categories);
-
     if (existingCategories.length === 0) {
       console.log('Creating default categories...');
       for (const category of DEFAULT_CATEGORIES) {
@@ -151,7 +107,7 @@ export class DatabaseStorage implements IStorage {
     return created;
   }
 
-  async updateUserPassword(id: number, password: string): Promise<void> { // Added method implementation
+  async updateUserPassword(id: number, password: string): Promise<void> { 
     await db
       .update(schema.users)
       .set({ password })
@@ -261,7 +217,6 @@ export class DatabaseStorage implements IStorage {
 
   async getProductsWithReviews(): Promise<(Product & { reviews: Review[] })[]> {
     try {
-      // Выполняем запросы параллельно для ускорения
       const [products, allReviews] = await Promise.all([
         db.select({
           id: schema.products.id,
@@ -285,7 +240,6 @@ export class DatabaseStorage implements IStorage {
           .orderBy(desc(schema.reviews.createdAt))
       ]);
 
-      // Используем Map для быстрого доступа к отзывам
       const reviewsByProductId = new Map<number, Review[]>();
       allReviews.forEach(review => {
         const reviews = reviewsByProductId.get(review.productId) || [];
@@ -324,11 +278,9 @@ export class DatabaseStorage implements IStorage {
   }
 }
 
-// Create storage instance
 console.log('Creating storage instance...');
 export const storage = new DatabaseStorage();
 
-// Initialize storage
 console.log('Starting storage initialization process...');
 storage.init()
   .then(() => console.log('Storage initialized successfully'))
