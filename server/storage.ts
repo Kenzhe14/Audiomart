@@ -1,9 +1,6 @@
 import { User, InsertUser, Product, CartItem, Brand, Category, DEFAULT_BRANDS, DEFAULT_CATEGORIES, Review, Order, InsertOrder, OrderItem, InsertOrderItem } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc } from "drizzle-orm";
-import session from "express-session";
-import connectPg from "connect-pg-simple";
-import { pool } from "./db";
 import * as schema from "@shared/schema";
 import { scrypt, randomBytes } from "crypto";
 import { promisify } from "util";
@@ -16,26 +13,9 @@ async function hashPassword(password: string) {
   return `${buf.toString("hex")}.${salt}`;
 }
 
-const PostgresSessionStore = connectPg(session);
-
 class DatabaseStorage {
-  readonly sessionStore: session.Store;
-
   constructor() {
     console.log('Initializing DatabaseStorage...');
-    try {
-      this.sessionStore = new PostgresSessionStore({
-        pool,
-        // Включаем автоматическое создание таблицы
-        createTableIfMissing: true,
-        tableName: 'sessions',
-        pruneSessionInterval: 60
-      });
-      console.log('Session store initialized');
-    } catch (error) {
-      console.error('Failed to initialize session store:', error);
-      throw error;
-    }
   }
 
   async init() {
