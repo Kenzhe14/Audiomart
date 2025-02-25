@@ -48,7 +48,7 @@ export default function ProductCard({ product }: { product: Product }) {
   });
 
   return (
-    <Card className="flex flex-col h-full transition-all duration-300 hover:shadow-lg animate-in fade-in slide-in-from-bottom-5">
+    <Card className="flex flex-col h-full transition-transform hover:scale-[1.02] motion-safe:hover:scale-[1.02] motion-reduce:hover:scale-100">
       <CardHeader className="flex-none">
         <div className="flex items-start justify-between">
           <div>
@@ -77,7 +77,8 @@ export default function ProductCard({ product }: { product: Product }) {
           <img
             src={product.imageUrl}
             alt={product.name}
-            className="w-full h-full object-cover transform hover:scale-105 transition-transform duration-200"
+            loading="lazy"
+            className="w-full h-full object-cover transition-transform duration-200 motion-safe:hover:scale-105 motion-reduce:hover:scale-100"
           />
         </div>
         <p className="text-sm text-muted-foreground line-clamp-2">

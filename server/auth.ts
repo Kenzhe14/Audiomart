@@ -34,6 +34,11 @@ export function setupAuth(app: Express) {
     resave: false,
     saveUninitialized: false,
     store: storage.sessionStore,
+    cookie: {
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      maxAge: 24 * 60 * 60 * 1000 // 24 hours
+    }
   };
 
   app.set("trust proxy", 1);
@@ -43,51 +48,85 @@ export function setupAuth(app: Express) {
 
   passport.use(
     new LocalStrategy(async (username, password, done) => {
-      const user = await storage.getUserByUsername(username);
-      if (!user || !(await comparePasswords(password, user.password))) {
-        return done(null, false);
-      } else {
-        return done(null, user);
+      try {
+        const user = await storage.getUserByUsername(username);
+        if (!user || !(await comparePasswords(password, user.password))) {
+          console.log('Auth failed:', username);
+          return done(null, false);
+        } else {
+          console.log('Auth success:', username);
+          return done(null, user);
+        }
+      } catch (error) {
+        console.error('Auth error:', error);
+        return done(error);
       }
     }),
   );
 
-  passport.serializeUser((user, done) => done(null, user.id));
+  passport.serializeUser((user, done) => {
+    console.log('Serializing user:', user.id);
+    done(null, user.id);
+  });
+
   passport.deserializeUser(async (id: number, done) => {
-    const user = await storage.getUser(id);
-    done(null, user);
+    try {
+      console.log('Deserializing user:', id);
+      const user = await storage.getUser(id);
+      done(null, user);
+    } catch (error) {
+      console.error('Deserialize error:', error);
+      done(error);
+    }
   });
 
   app.post("/api/register", async (req, res, next) => {
-    const existingUser = await storage.getUserByUsername(req.body.username);
-    if (existingUser) {
-      return res.status(400).send("Username already exists");
+    try {
+      const existingUser = await storage.getUserByUsername(req.body.username);
+      if (existingUser) {
+        return res.status(400).send("Username already exists");
+      }
+
+      const user = await storage.createUser({
+        ...req.body,
+        password: await hashPassword(req.body.password),
+      });
+
+      req.login(user, (err) => {
+        if (err) return next(err);
+        res.status(201).json(user);
+      });
+    } catch (error) {
+      console.error('Register error:', error);
+      next(error);
     }
-
-    const user = await storage.createUser({
-      ...req.body,
-      password: await hashPassword(req.body.password),
-    });
-
-    req.login(user, (err) => {
-      if (err) return next(err);
-      res.status(201).json(user);
-    });
   });
 
   app.post("/api/login", passport.authenticate("local"), (req, res) => {
+    console.log('Login success:', req.user);
     res.status(200).json(req.user);
   });
 
   app.post("/api/logout", (req, res, next) => {
+    const username = req.user?.username;
     req.logout((err) => {
-      if (err) return next(err);
+      if (err) {
+        console.error('Logout error:', err);
+        return next(err);
+      }
+      console.log('Logout success:', username);
       res.sendStatus(200);
     });
   });
 
   app.get("/api/user", (req, res) => {
+    console.log('User check:', req.isAuthenticated(), req.user);
     if (!req.isAuthenticated()) return res.sendStatus(401);
     res.json(req.user);
+  });
+
+  // Health check endpoint
+  app.get("/api/health", (_req, res) => {
+    res.status(200).send("ok");
   });
 }

@@ -3,44 +3,60 @@ import { createServer, type Server } from "http";
 import { setupAuth } from "./auth";
 import { storage } from "./storage";
 import { insertProductSchema } from "@shared/schema";
-import {insertReviewSchema} from "@shared/schema"; // Added import
+import { insertReviewSchema } from "@shared/schema";
 
+// Кэш для брендов и категорий
+let brandsCache: any[] = [];
+let categoriesCache: any[] = [];
+let lastBrandsFetch = 0;
+let lastCategoriesFetch = 0;
+const CACHE_TTL = 5 * 60 * 1000; // 5 минут
 
 export async function registerRoutes(app: Express): Promise<Server> {
   setupAuth(app);
 
-  // Brands
+  // Brands with caching
   app.get("/api/brands", async (_req, res) => {
-    const brands = await storage.getBrands();
-    res.json(brands);
+    const now = Date.now();
+    if (now - lastBrandsFetch > CACHE_TTL || brandsCache.length === 0) {
+      brandsCache = await storage.getBrands();
+      lastBrandsFetch = now;
+    }
+    res.json(brandsCache);
   });
 
   app.get("/api/brands/:id", async (req, res) => {
-    const brand = await storage.getBrand(parseInt(req.params.id));
+    const brand = brandsCache.find(b => b.id === parseInt(req.params.id)) ||
+                 await storage.getBrand(parseInt(req.params.id));
     if (!brand) return res.sendStatus(404);
     res.json(brand);
   });
 
-  // Categories
+  // Categories with caching
   app.get("/api/categories", async (_req, res) => {
-    const categories = await storage.getCategories();
-    res.json(categories);
+    const now = Date.now();
+    if (now - lastCategoriesFetch > CACHE_TTL || categoriesCache.length === 0) {
+      categoriesCache = await storage.getCategories();
+      lastCategoriesFetch = now;
+    }
+    res.json(categoriesCache);
   });
 
   app.get("/api/categories/:id", async (req, res) => {
-    const category = await storage.getCategory(parseInt(req.params.id));
+    const category = categoriesCache.find(c => c.id === parseInt(req.params.id)) ||
+                    await storage.getCategory(parseInt(req.params.id));
     if (!category) return res.sendStatus(404);
     res.json(category);
   });
 
-  // Products
+  // Products with reviews included
   app.get("/api/products", async (_req, res) => {
-    const products = await storage.getProducts();
+    const products = await storage.getProductsWithReviews();
     res.json(products);
   });
 
   app.get("/api/products/:id", async (req, res) => {
-    const product = await storage.getProduct(parseInt(req.params.id));
+    const product = await storage.getProductWithReviews(parseInt(req.params.id));
     if (!product) return res.sendStatus(404);
     res.json(product);
   });
