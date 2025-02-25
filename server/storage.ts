@@ -1,14 +1,23 @@
 import { User, InsertUser, Product, CartItem } from "@shared/schema";
 import session from "express-session";
 import createMemoryStore from "memorystore";
+import { scrypt, randomBytes } from "crypto";
+import { promisify } from "util";
 
 const MemoryStore = createMemoryStore(session);
+const scryptAsync = promisify(scrypt);
+
+async function hashPassword(password: string) {
+  const salt = randomBytes(16).toString("hex");
+  const buf = (await scryptAsync(password, salt, 64)) as Buffer;
+  return `${buf.toString("hex")}.${salt}`;
+}
 
 export interface IStorage {
   getUser(id: number): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
-  
+
   getProducts(): Promise<Product[]>;
   getProduct(id: number): Promise<Product | undefined>;
   createProduct(product: Omit<Product, "id">): Promise<Product>;
@@ -37,12 +46,19 @@ export class MemStorage implements IStorage {
     this.currentId = { users: 1, products: 1, cartItems: 1 };
     this.sessionStore = new MemoryStore({ checkPeriod: 86400000 });
 
-    // Create admin user
-    this.createUser({
+    // Create admin user with properly hashed password
+    this.initAdminUser();
+  }
+
+  private async initAdminUser() {
+    const hashedPassword = await hashPassword("admin123");
+    const adminUser: User = {
+      id: this.currentId.users++,
       username: "admin",
-      password: "admin123",
+      password: hashedPassword,
       isAdmin: true
-    } as InsertUser);
+    };
+    this.users.set(adminUser.id, adminUser);
   }
 
   async getUser(id: number): Promise<User | undefined> {
@@ -57,7 +73,7 @@ export class MemStorage implements IStorage {
 
   async createUser(insertUser: InsertUser): Promise<User> {
     const id = this.currentId.users++;
-    const user = { ...insertUser, id };
+    const user = { ...insertUser, id, isAdmin: false };
     this.users.set(id, user);
     return user;
   }
@@ -80,7 +96,7 @@ export class MemStorage implements IStorage {
   async updateProduct(id: number, update: Partial<Product>): Promise<Product> {
     const product = await this.getProduct(id);
     if (!product) throw new Error("Product not found");
-    
+
     const updatedProduct = { ...product, ...update };
     this.products.set(id, updatedProduct);
     return updatedProduct;
@@ -110,7 +126,7 @@ export class MemStorage implements IStorage {
   async updateCartQuantity(id: number, quantity: number): Promise<CartItem> {
     const item = this.cartItems.get(id);
     if (!item) throw new Error("Cart item not found");
-    
+
     const updated = { ...item, quantity };
     this.cartItems.set(id, updated);
     return updated;
