@@ -6,27 +6,16 @@ import { Form } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Redirect } from "wouter";
-import { Headphones } from "lucide-react";
 
 export default function AuthPage() {
   const { user, loginMutation, registerMutation } = useAuth();
 
-  const loginForm = useForm({
+  const form = useForm({
     resolver: zodResolver(insertUserSchema),
-    defaultValues: { 
-      username: "", 
-      password: "" 
-    },
-  });
-
-  const registerForm = useForm({
-    resolver: zodResolver(insertUserSchema),
-    defaultValues: { 
-      username: "", 
-      password: "",
-      phone: "+7"
+    defaultValues: {
+      username: "",
+      password: ""
     },
   });
 
@@ -35,102 +24,46 @@ export default function AuthPage() {
   }
 
   return (
-    <div className="min-h-[80vh] grid md:grid-cols-2 gap-8 items-center">
-      <div className="space-y-8">
-        <div className="space-y-4">
-          <h1 className="text-4xl font-bold">Welcome to AudioTech</h1>
-          <p className="text-lg text-muted-foreground">
-            Your one-stop shop for premium audio equipment. Sign in or create an
-            account to start shopping.
-          </p>
-        </div>
-
-        <div className="flex items-center justify-center p-8 bg-muted rounded-lg">
-          <Headphones className="w-32 h-32 text-primary" />
-        </div>
-      </div>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Authentication</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <Tabs defaultValue="login">
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="login">Login</TabsTrigger>
-              <TabsTrigger value="register">Register</TabsTrigger>
-            </TabsList>
-
-            <TabsContent value="login">
-              <Form {...loginForm}>
-                <form
-                  onSubmit={loginForm.handleSubmit((data) => {
-                    loginMutation.mutate(data);
-                  })}
+      <div className="min-h-screen flex items-center justify-center">
+        <Card className="w-[350px]">
+          <CardHeader>
+            <CardTitle>Вход в систему</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Form {...form}>
+              <form
+                  onSubmit={form.handleSubmit((data) => loginMutation.mutate(data))}
                   className="space-y-4"
-                >
-                  <Input
-                    {...loginForm.register("username")}
-                    placeholder="Username"
-                  />
-                  <Input
-                    {...loginForm.register("password")}
+              >
+                <Input
+                    {...form.register("username")}
+                    placeholder="Имя пользователя"
+                />
+                <Input
+                    {...form.register("password")}
                     type="password"
-                    placeholder="Password"
-                  />
-                  <Button
+                    placeholder="Пароль"
+                />
+                <Button
                     type="submit"
                     className="w-full"
                     disabled={loginMutation.isPending}
-                  >
-                    Login
-                  </Button>
-                </form>
-              </Form>
-            </TabsContent>
-
-            <TabsContent value="register">
-              <Form {...registerForm}>
-                <form
-                  onSubmit={registerForm.handleSubmit((data) => {
-                    registerMutation.mutate(data);
-                  })}
-                  className="space-y-4"
                 >
-                  <Input
-                    {...registerForm.register("username")}
-                    placeholder="Username"
-                  />
-                  <Input
-                    {...registerForm.register("password")}
-                    type="password"
-                    placeholder="Password"
-                  />
-                  <Input
-                    {...registerForm.register("phone")}
-                    placeholder="Номер телефона"
-                    onChange={(e) => {
-                      let value = e.target.value;
-                      if (!value.startsWith('+7')) {
-                        value = '+7' + value.replace('+7', '');
-                      }
-                      e.target.value = value;
-                      registerForm.setValue("phone", value);
-                    }}
-                  />
-                  <Button
-                    type="submit"
+                  Войти
+                </Button>
+                <Button
+                    type="button"
+                    variant="outline"
                     className="w-full"
+                    onClick={() => registerMutation.mutate(form.getValues())}
                     disabled={registerMutation.isPending}
-                  >
-                    Register
-                  </Button>
-                </form>
-              </Form>
-            </TabsContent>
-          </Tabs>
-        </CardContent>
-      </Card>
-    </div>
+                >
+                  Зарегистрироваться
+                </Button>
+              </form>
+            </Form>
+          </CardContent>
+        </Card>
+      </div>
   );
 }

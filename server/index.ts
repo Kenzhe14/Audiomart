@@ -21,7 +21,8 @@ app.use((req, res, next) => {
 
 // Обработка ошибок
 app.use((err: any, req: Request, res: Response, next: NextFunction) => {
-  console.error('Error:', err.message);
+  console.error('Error:', err);
+  console.error('Stack:', err.stack);
 
   const status = err.status || err.statusCode || 500;
   const message = err.message || "Internal Server Error";
@@ -31,11 +32,14 @@ app.use((err: any, req: Request, res: Response, next: NextFunction) => {
 
 (async () => {
   try {
+    console.log('Starting server initialization...');
     const server = await registerRoutes(app);
 
     if (app.get("env") === "development") {
+      console.log('Setting up Vite for development...');
       await setupVite(app, server);
     } else {
+      console.log('Setting up static serving for production...');
       serveStatic(app);
     }
 
@@ -44,11 +48,13 @@ app.use((err: any, req: Request, res: Response, next: NextFunction) => {
       port,
       host: "0.0.0.0",
     }, () => {
-      console.log(`Server started on port ${port}`);
+      console.log(`Server started successfully on port ${port}`);
       console.log(`Environment: ${app.get("env")}`);
+      console.log('Ready to accept connections');
     });
   } catch (error) {
-    console.error('Server error:', error);
+    console.error('Fatal server error:', error);
+    console.error('Stack trace:', error.stack);
     process.exit(1);
   }
 })();

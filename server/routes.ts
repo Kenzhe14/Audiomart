@@ -27,7 +27,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/brands/:id", async (req, res) => {
     const brand = brandsCache.find(b => b.id === parseInt(req.params.id)) ||
-                 await storage.getBrand(parseInt(req.params.id));
+        await storage.getBrand(parseInt(req.params.id));
     if (!brand) return res.sendStatus(404);
     res.json(brand);
   });
@@ -44,7 +44,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/categories/:id", async (req, res) => {
     const category = categoriesCache.find(c => c.id === parseInt(req.params.id)) ||
-                    await storage.getCategory(parseInt(req.params.id));
+        await storage.getCategory(parseInt(req.params.id));
     if (!category) return res.sendStatus(404);
     res.json(category);
   });
@@ -71,7 +71,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     // Проверяем, покупал ли пользователь этот товар
     const orders = await storage.getOrders(userId);
     const orderItems = await Promise.all(
-      orders.map(order => storage.getOrderItems(order.id))
+        orders.map(order => storage.getOrderItems(order.id))
     );
     const hasPurchased = orderItems.flat().some(item => item.productId === productId);
 
@@ -185,8 +185,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
     try {
       const item = await storage.updateCartQuantity(
-        parseInt(req.params.id),
-        req.body.quantity
+          parseInt(req.params.id),
+          req.body.quantity
       );
       res.json(item);
     } catch (err) {
@@ -216,16 +216,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
     const orders = await storage.getAllOrders();
     const ordersWithDetails = await Promise.all(
-      orders.map(async (order) => {
-        const items = await storage.getOrderItems(order.id);
-        const itemsWithProducts = await Promise.all(
-          items.map(async (item) => {
-            const product = await storage.getProduct(item.productId);
-            return { ...item, product };
-          })
-        );
-        return { ...order, items: itemsWithProducts };
-      })
+        orders.map(async (order) => {
+          const items = await storage.getOrderItems(order.id);
+          const itemsWithProducts = await Promise.all(
+              items.map(async (item) => {
+                const product = await storage.getProduct(item.productId);
+                return { ...item, product };
+              })
+          );
+          return { ...order, items: itemsWithProducts };
+        })
     );
     res.json(ordersWithDetails);
   });
@@ -254,20 +254,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
     // Создаем элементы заказа
     await Promise.all(
-      cartItems.map(async (item) => {
-        const product = await storage.getProduct(item.productId);
-        await storage.createOrderItem({
-          orderId: order.id,
-          productId: item.productId,
-          quantity: item.quantity,
-          priceAtTime: product.price
-        });
-      })
+        cartItems.map(async (item) => {
+          const product = await storage.getProduct(item.productId);
+          await storage.createOrderItem({
+            orderId: order.id,
+            productId: item.productId,
+            quantity: item.quantity,
+            priceAtTime: product.price
+          });
+        })
     );
 
     // Очищаем корзину
     await Promise.all(
-      cartItems.map(item => storage.removeFromCart(item.id))
+        cartItems.map(item => storage.removeFromCart(item.id))
     );
 
     res.status(201).json(order);
@@ -279,8 +279,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
 
     const order = await storage.updateOrderStatus(
-      parseInt(req.params.id),
-      req.body.status
+        parseInt(req.params.id),
+        req.body.status
     );
     res.json(order);
   });

@@ -1,4 +1,4 @@
-import { pgTable, text, serial, integer, boolean, doublePrecision, timestamp } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, boolean, integer, doublePrecision, timestamp } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -8,18 +8,12 @@ export const users = pgTable("users", {
   id: serial("id").primaryKey(),
   username: text("username").notNull().unique(),
   password: text("password").notNull(),
-  isAdmin: boolean("is_admin").notNull().default(false),
-  phone: text("phone").notNull()
+  isAdmin: boolean("is_admin").notNull().default(false)
 });
 
 export const insertUserSchema = createInsertSchema(users).pick({
   username: true,
-  password: true,
-  phone: true
-}).extend({
-  phone: z.string()
-    .regex(phoneRegex, "Номер телефона должен быть в формате +7XXXXXXXXXX")
-    .refine((val) => val.length === 12, "Номер телефона должен содержать 10 цифр после +7")
+  password: true
 });
 
 export const brands = pgTable("brands", {
@@ -90,14 +84,18 @@ export const insertReviewSchema = createInsertSchema(reviews).extend({
   rating: z.number().min(1).max(5)
 });
 
-export const insertOrderSchema = createInsertSchema(orders).omit({ 
-  id: true,
-  createdAt: true,
-  updatedAt: true 
+export const insertOrderSchema = createInsertSchema(orders).pick({
+  userId: true,
+  shippingAddress: true,
+  contactPhone: true,
+  totalAmount: true
 });
 
-export const insertOrderItemSchema = createInsertSchema(orderItems).omit({ 
-  id: true 
+export const insertOrderItemSchema = createInsertSchema(orderItems).pick({
+  orderId: true,
+  productId: true,
+  quantity: true,
+  priceAtTime: true
 });
 
 export type InsertUser = z.infer<typeof insertUserSchema>;
@@ -115,33 +113,33 @@ export type InsertOrderItem = z.infer<typeof insertOrderItemSchema>;
 
 export const DEFAULT_CATEGORIES = [
   { name: "Наушники", subcategories: [
-    "Беспроводные наушники",
-    "Проводные наушники",
-    "Спортивные наушники",
-    "Профессиональные наушники"
-  ]},
+      "Беспроводные наушники",
+      "Проводные наушники",
+      "Спортивные наушники",
+      "Профессиональные наушники"
+    ]},
   { name: "Колонки", subcategories: [
-    "Портативные колонки",
-    "Домашние колонки",
-    "Профессиональные колонки",
-    "Умные колонки"
-  ]},
+      "Портативные колонки",
+      "Домашние колонки",
+      "Профессиональные колонки",
+      "Умные колонки"
+    ]},
   { name: "Усилители", subcategories: [
-    "Предусилители",
-    "Усилители мощности",
-    "Интегральные усилители"
-  ]},
+      "Предусилители",
+      "Усилители мощности",
+      "Интегральные усилители"
+    ]},
   { name: "Микрофоны", subcategories: [
-    "Конденсаторные микрофоны",
-    "Динамические микрофоны",
-    "USB микрофоны",
-    "Беспроводные микрофоны"
-  ]},
+      "Конденсаторные микрофоны",
+      "Динамические микрофоны",
+      "USB микрофоны",
+      "Беспроводные микрофоны"
+    ]},
   { name: "DJ Оборудование", subcategories: [
-    "DJ контроллеры",
-    "DJ микшеры",
-    "Виниловые проигрыватели"
-  ]}
+      "DJ контроллеры",
+      "DJ микшеры",
+      "Виниловые проигрыватели"
+    ]}
 ];
 
 export const DEFAULT_BRANDS = [
