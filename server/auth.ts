@@ -7,7 +7,9 @@ import jwt from "jsonwebtoken";
 
 declare global {
   namespace Express {
-    interface User extends SelectUser {}
+    interface Request {
+      user?: SelectUser;
+    }
   }
 }
 
@@ -117,7 +119,7 @@ export function setupAuth(app: Express) {
     res.json(req.user);
   });
 
-  app.post("/api/logout", (req: Request, res: Response) => {
+  app.post("/api/logout", (_req: Request, res: Response) => {
     res.sendStatus(200);
   });
 
