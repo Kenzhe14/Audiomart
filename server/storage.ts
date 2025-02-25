@@ -18,7 +18,7 @@ class DatabaseStorage {
         pool,
         // Отключаем автоматическое создание таблицы
         createTableIfMissing: false,
-        tableName: 'user_sessions',
+        tableName: 'sessions',
         pruneSessionInterval: 60
       });
       console.log('Session store initialized');
