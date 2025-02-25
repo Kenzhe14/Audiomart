@@ -1,59 +1,27 @@
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
-import { setupVite, serveStatic, log } from "./vite";
+import { setupVite, serveStatic } from "./vite";
 
 const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
-// Улучшенное логирование для отладки
+// Базовое логирование для отладки
 app.use((req, res, next) => {
   const start = Date.now();
-  const path = req.path;
-
-  console.log(`[${new Date().toISOString()}] ${req.method} ${path} - Request started`);
-  console.log('Headers:', req.headers);
-  if (req.body && Object.keys(req.body).length > 0) {
-    console.log('Body:', JSON.stringify(req.body, null, 2));
-  }
-
-  let capturedJsonResponse: Record<string, any> | undefined = undefined;
-
-  const originalResJson = res.json;
-  res.json = function (bodyJson, ...args) {
-    capturedJsonResponse = bodyJson;
-    return originalResJson.apply(res, [bodyJson, ...args]);
-  };
+  console.log(`${req.method} ${req.path}`);
 
   res.on("finish", () => {
     const duration = Date.now() - start;
-    if (path.startsWith("/api")) {
-      let logLine = `[${new Date().toISOString()}] ${req.method} ${path} ${res.statusCode} in ${duration}ms`;
-      if (capturedJsonResponse) {
-        logLine += ` :: ${JSON.stringify(capturedJsonResponse)}`;
-      }
-      console.log(logLine);
-    }
+    console.log(`${req.method} ${req.path} - ${res.statusCode} (${duration}ms)`);
   });
 
   next();
 });
 
-// Обработка ошибок с подробным логированием
+// Обработка ошибок
 app.use((err: any, req: Request, res: Response, next: NextFunction) => {
-  console.error('[ERROR]', {
-    timestamp: new Date().toISOString(),
-    path: req.path,
-    method: req.method,
-    error: {
-      message: err.message,
-      stack: err.stack,
-      status: err.status || err.statusCode || 500
-    },
-    body: req.body,
-    query: req.query,
-    headers: req.headers
-  });
+  console.error('Error:', err.message);
 
   const status = err.status || err.statusCode || 500;
   const message = err.message || "Internal Server Error";
@@ -75,19 +43,12 @@ app.use((err: any, req: Request, res: Response, next: NextFunction) => {
     server.listen({
       port,
       host: "0.0.0.0",
-      reusePort: true,
     }, () => {
-      console.log(`[${new Date().toISOString()}] Server started on port ${port}`);
+      console.log(`Server started on port ${port}`);
       console.log(`Environment: ${app.get("env")}`);
     });
   } catch (error) {
-    console.error('[FATAL ERROR]', {
-      timestamp: new Date().toISOString(),
-      error: {
-        message: error.message,
-        stack: error.stack
-      }
-    });
+    console.error('Server error:', error);
     process.exit(1);
   }
 })();
