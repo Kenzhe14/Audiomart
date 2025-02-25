@@ -14,6 +14,8 @@ async function hashPassword(password: string) {
 }
 
 export interface IStorage {
+  init(): Promise<void>;
+
   // User operations
   getUser(id: number): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
@@ -68,11 +70,12 @@ export class MemStorage implements IStorage {
       cartItems: 1 
     };
     this.sessionStore = new MemoryStore({ checkPeriod: 86400000 });
+  }
 
-    // Initialize default data
-    this.initAdminUser();
-    this.initDefaultBrands();
-    this.initDefaultCategories();
+  async init() {
+    await this.initAdminUser();
+    await this.initDefaultBrands();
+    await this.initDefaultCategories();
   }
 
   private async initAdminUser() {
@@ -227,3 +230,14 @@ export class MemStorage implements IStorage {
 }
 
 export const storage = new MemStorage();
+
+// Initialize storage
+(async () => {
+  try {
+    await storage.init();
+    console.log('Storage initialized successfully');
+  } catch (error) {
+    console.error('Failed to initialize storage:', error);
+    process.exit(1);
+  }
+})();

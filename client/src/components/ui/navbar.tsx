@@ -16,7 +16,9 @@ export default function Navbar() {
     <nav className="border-b">
       <div className="container mx-auto px-4 h-16 flex items-center justify-between">
         <Link href="/">
-          <a className="text-xl font-bold">AudioTech</a>
+          <Button variant="link" className="text-xl font-bold p-0">
+            AudioTech
+          </Button>
         </Link>
 
         <NavigationMenu>

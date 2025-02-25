@@ -1,4 +1,4 @@
-import { Product } from "@shared/schema";
+import { Product, Brand, Category } from "@shared/schema";
 import {
   Card,
   CardContent,
@@ -18,11 +18,11 @@ export default function ProductCard({ product }: { product: Product }) {
   const { user } = useAuth();
   const { toast } = useToast();
 
-  const { data: brands = [] } = useQuery({
+  const { data: brands = [] } = useQuery<Brand[]>({
     queryKey: ["/api/brands"],
   });
 
-  const { data: categories = [] } = useQuery({
+  const { data: categories = [] } = useQuery<Category[]>({
     queryKey: ["/api/categories"],
   });
 

@@ -7,6 +7,30 @@ import { insertProductSchema } from "@shared/schema";
 export async function registerRoutes(app: Express): Promise<Server> {
   setupAuth(app);
 
+  // Brands
+  app.get("/api/brands", async (_req, res) => {
+    const brands = await storage.getBrands();
+    res.json(brands);
+  });
+
+  app.get("/api/brands/:id", async (req, res) => {
+    const brand = await storage.getBrand(parseInt(req.params.id));
+    if (!brand) return res.sendStatus(404);
+    res.json(brand);
+  });
+
+  // Categories
+  app.get("/api/categories", async (_req, res) => {
+    const categories = await storage.getCategories();
+    res.json(categories);
+  });
+
+  app.get("/api/categories/:id", async (req, res) => {
+    const category = await storage.getCategory(parseInt(req.params.id));
+    if (!category) return res.sendStatus(404);
+    res.json(category);
+  });
+
   // Products
   app.get("/api/products", async (_req, res) => {
     const products = await storage.getProducts();
@@ -24,7 +48,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return res.sendStatus(403);
     }
 
-    const parsed = insertProductSchema.safeParse(req.body);
+    // Генерируем уникальный SKU
+    const sku = `SKU${Date.now()}${Math.floor(Math.random() * 1000)}`;
+    const productData = { ...req.body, sku };
+
+    const parsed = insertProductSchema.safeParse(productData);
     if (!parsed.success) return res.status(400).json(parsed.error);
 
     const product = await storage.createProduct(parsed.data);
@@ -59,7 +87,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Cart
   app.get("/api/cart", async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
-    
+
     const items = await storage.getCartItems(req.user.id);
     res.json(items);
   });
