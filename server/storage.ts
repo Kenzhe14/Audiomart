@@ -5,6 +5,16 @@ import session from "express-session";
 import connectPg from "connect-pg-simple";
 import { pool } from "./db";
 import * as schema from "@shared/schema";
+import { scrypt, randomBytes } from "crypto";
+import { promisify } from "util";
+
+const scryptAsync = promisify(scrypt);
+
+async function hashPassword(password: string) {
+  const salt = randomBytes(16).toString("hex");
+  const buf = (await scryptAsync(password, salt, 64)) as Buffer;
+  return `${buf.toString("hex")}.${salt}`;
+}
 
 const PostgresSessionStore = connectPg(session);
 
@@ -46,12 +56,15 @@ class DatabaseStorage {
     const admin = await this.getUserByUsername("admin");
     if (!admin) {
       console.log('Creating admin account...');
+      // Хешируем пароль админа при создании
+      const hashedPassword = await hashPassword("admin123");
       await db.insert(schema.users).values({
         username: "admin",
-        password: "admin123",
+        password: hashedPassword,
         isAdmin: true,
         phone: "+70000000000" // Добавляем телефон для админа
       });
+      console.log('Admin account created successfully');
     }
   }
 

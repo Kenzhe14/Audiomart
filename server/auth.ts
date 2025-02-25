@@ -49,14 +49,16 @@ export function setupAuth(app: Express) {
   passport.use(
     new LocalStrategy(async (username, password, done) => {
       try {
+        console.log('Auth attempt:', username);
         const user = await storage.getUserByUsername(username);
         if (!user) {
           console.log('Auth failed: User not found -', username);
           return done(null, false);
         }
 
-        // Hash the stored password for admin if it's not already hashed
+        // Проверяем, не является ли пароль админа нехешированным
         if (user.username === 'admin' && !user.password.includes('.')) {
+          console.log('Updating admin password hash...');
           user.password = await hashPassword('admin123');
           await storage.updateUserPassword(user.id, user.password);
         }
