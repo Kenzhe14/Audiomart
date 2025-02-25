@@ -43,7 +43,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 export default function AdminProducts() {
   const { user } = useAuth();
@@ -70,10 +70,11 @@ export default function AdminProducts() {
       categoryId: 0,
       brandId: 0,
       stock: 0,
+      sku: ""
     },
   });
 
-  // Redirect if not admin
+  // Редирект если не админ
   if (!user?.isAdmin) {
     return <Redirect to="/" />;
   }
@@ -82,8 +83,36 @@ export default function AdminProducts() {
     queryKey: ["/api/products"],
   });
 
+  useEffect(() => {
+    if (editingProduct) {
+      // Заполняем форму данными редактируемого товара
+      form.reset({
+        name: editingProduct.name,
+        description: editingProduct.description,
+        price: editingProduct.price,
+        imageUrl: editingProduct.imageUrl,
+        categoryId: editingProduct.categoryId,
+        brandId: editingProduct.brandId,
+        stock: editingProduct.stock,
+        sku: editingProduct.sku
+      });
+    } else {
+      // Сбрасываем форму при создании нового товара
+      form.reset({
+        name: "",
+        description: "",
+        price: 0,
+        imageUrl: "",
+        categoryId: 0,
+        brandId: 0,
+        stock: 0,
+        sku: ""
+      });
+    }
+  }, [editingProduct, form]);
+
   const createProductMutation = useMutation({
-    mutationFn: async (data: Omit<Product, "id" | "sku">) => {
+    mutationFn: async (data: Omit<Product, "id">) => {
       const res = await apiRequest("POST", "/api/products", data);
       return res.json();
     },
@@ -119,6 +148,13 @@ export default function AdminProducts() {
         description: "Товар успешно обновлен",
       });
     },
+    onError: (error: Error) => {
+      toast({
+        title: "Ошибка",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
   });
 
   const deleteProductMutation = useMutation({
@@ -131,6 +167,13 @@ export default function AdminProducts() {
       toast({
         title: "Успех",
         description: "Товар успешно удален",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Ошибка",
+        description: error.message,
+        variant: "destructive",
       });
     },
   });
@@ -153,6 +196,125 @@ export default function AdminProducts() {
     return category?.name || 'Неизвестная категория';
   };
 
+  const ProductForm = () => (
+    <Form {...form}>
+      <form
+        onSubmit={form.handleSubmit((data) =>
+          editingProduct
+            ? updateProductMutation.mutate({ ...data, id: editingProduct.id })
+            : createProductMutation.mutate(data)
+        )}
+        className="space-y-4"
+      >
+        <div className="space-y-2">
+          <label className="text-sm font-medium">Название</label>
+          <Input {...form.register("name")} placeholder="Название товара" />
+        </div>
+
+        <div className="space-y-2">
+          <label className="text-sm font-medium">Артикул (SKU)</label>
+          <Input {...form.register("sku")} placeholder="SKU товара" />
+        </div>
+
+        <div className="space-y-2">
+          <label className="text-sm font-medium">Описание</label>
+          <Textarea
+            {...form.register("description")}
+            placeholder="Описание товара"
+            rows={4}
+          />
+        </div>
+
+        <div className="space-y-2">
+          <label className="text-sm font-medium">Цена</label>
+          <Input
+            {...form.register("price", { valueAsNumber: true })}
+            type="number"
+            step="0.01"
+            placeholder="Цена"
+          />
+        </div>
+
+        <div className="space-y-2">
+          <label className="text-sm font-medium">URL изображения</label>
+          <Input
+            {...form.register("imageUrl")}
+            placeholder="URL изображения"
+          />
+        </div>
+
+        <div className="space-y-2">
+          <label className="text-sm font-medium">Категория</label>
+          <Select
+            value={form.getValues("categoryId").toString()}
+            onValueChange={(value) =>
+              form.setValue("categoryId", parseInt(value))
+            }
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Выберите категорию" />
+            </SelectTrigger>
+            <SelectContent>
+              {categories.map((category) => (
+                <SelectItem
+                  key={category.id}
+                  value={category.id.toString()}
+                >
+                  {category.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="space-y-2">
+          <label className="text-sm font-medium">Бренд</label>
+          <Select
+            value={form.getValues("brandId").toString()}
+            onValueChange={(value) =>
+              form.setValue("brandId", parseInt(value))
+            }
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Выберите бренд" />
+            </SelectTrigger>
+            <SelectContent>
+              {brands.map((brand) => (
+                <SelectItem
+                  key={brand.id}
+                  value={brand.id.toString()}
+                >
+                  {brand.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="space-y-2">
+          <label className="text-sm font-medium">Количество на складе</label>
+          <Input
+            {...form.register("stock", { valueAsNumber: true })}
+            type="number"
+            placeholder="Количество"
+          />
+        </div>
+
+        <Button
+          type="submit"
+          className="w-full"
+          disabled={createProductMutation.isPending || updateProductMutation.isPending}
+        >
+          {(createProductMutation.isPending || updateProductMutation.isPending) ? (
+            <Loader2 className="h-4 w-4 animate-spin" />
+          ) : (
+            editingProduct ? "Обновить товар" : "Создать товар"
+          )}
+        </Button>
+      </form>
+    </Form>
+  );
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -168,84 +330,7 @@ export default function AdminProducts() {
             <DialogHeader>
               <DialogTitle>Добавить новый товар</DialogTitle>
             </DialogHeader>
-            <Form {...form}>
-              <form
-                onSubmit={form.handleSubmit((data) =>
-                  createProductMutation.mutate(data)
-                )}
-                className="space-y-4"
-              >
-                <Input {...form.register("name")} placeholder="Название" />
-                <Textarea
-                  {...form.register("description")}
-                  placeholder="Описание"
-                />
-                <Input
-                  {...form.register("price", { valueAsNumber: true })}
-                  type="number"
-                  step="0.01"
-                  placeholder="Цена"
-                />
-                <Input 
-                  {...form.register("imageUrl")} 
-                  placeholder="URL изображения" 
-                />
-                <Select 
-                  onValueChange={(value) => 
-                    form.setValue("categoryId", parseInt(value))
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Выберите категорию" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {categories.map((category) => (
-                      <SelectItem 
-                        key={category.id} 
-                        value={category.id.toString()}
-                      >
-                        {category.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <Select 
-                  onValueChange={(value) => 
-                    form.setValue("brandId", parseInt(value))
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Выберите бренд" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {brands.map((brand) => (
-                      <SelectItem 
-                        key={brand.id} 
-                        value={brand.id.toString()}
-                      >
-                        {brand.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <Input
-                  {...form.register("stock", { valueAsNumber: true })}
-                  type="number"
-                  placeholder="Количество"
-                />
-                <Button
-                  type="submit"
-                  className="w-full"
-                  disabled={createProductMutation.isPending}
-                >
-                  {createProductMutation.isPending ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    "Создать товар"
-                  )}
-                </Button>
-              </form>
-            </Form>
+            <ProductForm />
           </DialogContent>
         </Dialog>
       </div>
@@ -254,6 +339,7 @@ export default function AdminProducts() {
         <Table>
           <TableHeader>
             <TableRow>
+              <TableHead>Артикул</TableHead>
               <TableHead>Название</TableHead>
               <TableHead>Бренд</TableHead>
               <TableHead>Категория</TableHead>
@@ -265,6 +351,7 @@ export default function AdminProducts() {
           <TableBody>
             {products.map((product) => (
               <TableRow key={product.id}>
+                <TableCell>{product.sku}</TableCell>
                 <TableCell>{product.name}</TableCell>
                 <TableCell>{getBrandName(product.brandId)}</TableCell>
                 <TableCell>{getCategoryName(product.categoryId)}</TableCell>
@@ -287,98 +374,7 @@ export default function AdminProducts() {
                         <DialogHeader>
                           <DialogTitle>Редактировать товар</DialogTitle>
                         </DialogHeader>
-                        <Form {...form}>
-                          <form
-                            onSubmit={form.handleSubmit((data) =>
-                              updateProductMutation.mutate({
-                                ...data,
-                                id: product.id,
-                                sku: product.sku,
-                              })
-                            )}
-                            className="space-y-4"
-                          >
-                            <Input
-                              {...form.register("name")}
-                              placeholder="Название"
-                              defaultValue={product.name}
-                            />
-                            <Textarea
-                              {...form.register("description")}
-                              placeholder="Описание"
-                              defaultValue={product.description}
-                            />
-                            <Input
-                              {...form.register("price", { valueAsNumber: true })}
-                              type="number"
-                              step="0.01"
-                              placeholder="Цена"
-                              defaultValue={product.price}
-                            />
-                            <Input
-                              {...form.register("imageUrl")}
-                              placeholder="URL изображения"
-                              defaultValue={product.imageUrl}
-                            />
-                            <Select 
-                              defaultValue={product.categoryId.toString()}
-                              onValueChange={(value) => 
-                                form.setValue("categoryId", parseInt(value))
-                              }
-                            >
-                              <SelectTrigger>
-                                <SelectValue placeholder="Выберите категорию" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {categories.map((category) => (
-                                  <SelectItem 
-                                    key={category.id} 
-                                    value={category.id.toString()}
-                                  >
-                                    {category.name}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                            <Select 
-                              defaultValue={product.brandId.toString()}
-                              onValueChange={(value) => 
-                                form.setValue("brandId", parseInt(value))
-                              }
-                            >
-                              <SelectTrigger>
-                                <SelectValue placeholder="Выберите бренд" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {brands.map((brand) => (
-                                  <SelectItem 
-                                    key={brand.id} 
-                                    value={brand.id.toString()}
-                                  >
-                                    {brand.name}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                            <Input
-                              {...form.register("stock", { valueAsNumber: true })}
-                              type="number"
-                              placeholder="Количество"
-                              defaultValue={product.stock}
-                            />
-                            <Button
-                              type="submit"
-                              className="w-full"
-                              disabled={updateProductMutation.isPending}
-                            >
-                              {updateProductMutation.isPending ? (
-                                <Loader2 className="h-4 w-4 animate-spin" />
-                              ) : (
-                                "Обновить товар"
-                              )}
-                            </Button>
-                          </form>
-                        </Form>
+                        <ProductForm />
                       </DialogContent>
                     </Dialog>
 

@@ -93,6 +93,77 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
 
+  // Управление товарами
+  app.post("/api/products", async (req, res) => {
+    if (!req.isAuthenticated() || !req.user.isAdmin) {
+      return res.sendStatus(403);
+    }
+
+    try {
+      // Проверяем данные с помощью схемы
+      const parsed = insertProductSchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json(parsed.error);
+      }
+
+      const product = await storage.createProduct(parsed.data);
+      res.status(201).json(product);
+    } catch (error) {
+      console.error('Error creating product:', error);
+      res.status(500).json({ error: 'Failed to create product' });
+    }
+  });
+
+  app.patch("/api/products/:id", async (req, res) => {
+    if (!req.isAuthenticated() || !req.user.isAdmin) {
+      return res.sendStatus(403);
+    }
+
+    const productId = parseInt(req.params.id);
+    if (isNaN(productId)) {
+      return res.status(400).json({ error: 'Invalid product ID' });
+    }
+
+    try {
+      // Проверяем существование продукта
+      const existingProduct = await storage.getProduct(productId);
+      if (!existingProduct) {
+        return res.status(404).json({ error: 'Product not found' });
+      }
+
+      const product = await storage.updateProduct(productId, req.body);
+      res.json(product);
+    } catch (error) {
+      console.error('Error updating product:', error);
+      res.status(500).json({ error: 'Failed to update product' });
+    }
+  });
+
+  app.delete("/api/products/:id", async (req, res) => {
+    if (!req.isAuthenticated() || !req.user.isAdmin) {
+      return res.sendStatus(403);
+    }
+
+    const productId = parseInt(req.params.id);
+    if (isNaN(productId)) {
+      return res.status(400).json({ error: 'Invalid product ID' });
+    }
+
+    try {
+      // Проверяем существование продукта
+      const existingProduct = await storage.getProduct(productId);
+      if (!existingProduct) {
+        return res.status(404).json({ error: 'Product not found' });
+      }
+
+      await storage.deleteProduct(productId);
+      res.sendStatus(204);
+    } catch (error) {
+      console.error('Error deleting product:', error);
+      res.status(500).json({ error: 'Failed to delete product' });
+    }
+  });
+
   // Cart
   app.get("/api/cart", async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
