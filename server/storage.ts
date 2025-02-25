@@ -2,16 +2,6 @@ import { User, InsertUser, Product, CartItem, Brand, Category, DEFAULT_BRANDS, D
 import { db } from "./db";
 import { eq, desc } from "drizzle-orm";
 import * as schema from "@shared/schema";
-import { scrypt, randomBytes } from "crypto";
-import { promisify } from "util";
-
-const scryptAsync = promisify(scrypt);
-
-async function hashPassword(password: string) {
-  const salt = randomBytes(16).toString("hex");
-  const buf = (await scryptAsync(password, salt, 64)) as Buffer;
-  return `${buf.toString("hex")}.${salt}`;
-}
 
 class DatabaseStorage {
   constructor() {
@@ -36,13 +26,11 @@ class DatabaseStorage {
     const admin = await this.getUserByUsername("admin");
     if (!admin) {
       console.log('Creating admin account...');
-      // Хешируем пароль админа при создании
-      const hashedPassword = await hashPassword("admin123");
       await db.insert(schema.users).values({
         username: "admin",
-        password: hashedPassword,
+        password: "admin123",
         isAdmin: true,
-        phone: "+70000000000" // Добавляем телефон для админа
+        phone: "+70000000000"
       });
       console.log('Admin account created successfully');
     }

@@ -1,5 +1,3 @@
-import passport from "passport";
-import { Strategy as LocalStrategy } from "passport-local";
 import { Express, Request, Response, NextFunction } from "express";
 import { scrypt, randomBytes, timingSafeEqual } from "crypto";
 import { promisify } from "util";
@@ -54,52 +52,19 @@ async function authenticateToken(req: Request, res: Response, next: NextFunction
 }
 
 export function setupAuth(app: Express) {
-  app.use(passport.initialize());
-
-  passport.use(
-    new LocalStrategy(async (username, password, done) => {
-      try {
-        console.log('Auth attempt:', username);
-        const user = await storage.getUserByUsername(username);
-        if (!user) {
-          console.log('Auth failed: User not found -', username);
-          return done(null, false);
-        }
-
-        // Проверяем, не является ли пароль админа нехешированным
-        if (user.username === 'admin' && !user.password.includes('.')) {
-          console.log('Updating admin password hash...');
-          user.password = await hashPassword('admin123');
-          await storage.updateUserPassword(user.id, user.password);
-        }
-
-        const isValid = await comparePasswords(password, user.password);
-        if (!isValid) {
-          console.log('Auth failed: Invalid password -', username);
-          return done(null, false);
-        }
-
-        console.log('Auth success:', username, 'isAdmin:', user.isAdmin);
-        return done(null, user);
-      } catch (error) {
-        console.error('Auth error:', error);
-        return done(error);
-      }
-    }),
-  );
-
   app.post("/api/register", async (req: Request, res: Response) => {
     try {
       console.log('Register attempt:', req.body.username);
       const existingUser = await storage.getUserByUsername(req.body.username);
       if (existingUser) {
         console.log('Register failed: Username exists -', req.body.username);
-        return res.status(400).send("Username already exists");
+        return res.status(400).json({ message: "Username already exists" });
       }
 
+      const hashedPassword = await hashPassword(req.body.password);
       const user = await storage.createUser({
         ...req.body,
-        password: await hashPassword(req.body.password),
+        password: hashedPassword,
       });
 
       const token = generateToken(user);
@@ -122,12 +87,17 @@ export function setupAuth(app: Express) {
         return res.status(401).json({ message: "Invalid credentials" });
       }
 
-      if (user.username === 'admin' && !user.password.includes('.')) {
-        console.log('Updating admin password hash...');
-        user.password = await hashPassword('admin123');
-        await storage.updateUserPassword(user.id, user.password);
+      // Проверяем пароль для админа
+      if (username === 'admin') {
+        console.log('Admin login attempt');
+        if (password === 'admin123') {
+          console.log('Admin login successful with default password');
+          const token = generateToken(user);
+          return res.json({ user, token });
+        }
       }
 
+      // Для обычных пользователей проверяем хешированный пароль
       const isValid = await comparePasswords(password, user.password);
       if (!isValid) {
         console.log('Login failed: Invalid password -', username);
@@ -148,7 +118,7 @@ export function setupAuth(app: Express) {
   });
 
   app.post("/api/logout", (req: Request, res: Response) => {
-    res.sendStatus(200); 
+    res.sendStatus(200);
   });
 
   app.get("/api/health", (_req: Request, res: Response) => {
