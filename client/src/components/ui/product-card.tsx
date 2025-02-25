@@ -15,9 +15,11 @@ import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
 import ProductReviews from "./product-reviews";
 import { ShareButtons } from "./share-buttons";
-import { ProductView3D } from "./product-view-3d";
-import { useState } from "react";
+import { lazy, Suspense, useState } from "react";
 import { View, ImageIcon } from "lucide-react";
+import { SafeSuspense } from "./safe-suspense";
+
+const ProductView3D = lazy(() => import("./product-view-3d").then(mod => ({ default: mod.ProductView3D })));
 
 export default function ProductCard({ product }: { product: Product }) {
   const { user } = useAuth();
@@ -91,7 +93,9 @@ export default function ProductCard({ product }: { product: Product }) {
       <CardContent className="flex-grow">
         <div className="aspect-square overflow-hidden rounded-md mb-4">
           {show3D ? (
-            <ProductView3D />
+            <SafeSuspense>
+              <ProductView3D />
+            </SafeSuspense>
           ) : (
             <img
               src={product.imageUrl}

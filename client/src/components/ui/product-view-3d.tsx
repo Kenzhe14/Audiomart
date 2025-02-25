@@ -1,7 +1,7 @@
 import { useRef } from 'react';
 import * as THREE from 'three';
 import { Canvas, useFrame } from '@react-three/fiber';
-import { PerspectiveCamera, OrbitControls, useGLTF, Environment, MeshReflectorMaterial } from '@react-three/drei';
+import { PerspectiveCamera, OrbitControls, Environment } from '@react-three/drei';
 
 function Product3DModel() {
   const meshRef = useRef<THREE.Mesh>(null);
@@ -40,17 +40,10 @@ export function ProductView3D() {
         <Environment preset="city" />
         <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -1, 0]}>
           <planeGeometry args={[50, 50]} />
-          <MeshReflectorMaterial
-            blur={[300, 100]}
-            resolution={2048}
-            mixBlur={1}
-            mixStrength={40}
-            roughness={1}
-            depthScale={1.2}
-            minDepthThreshold={0.4}
-            maxDepthThreshold={1.4}
+          <meshStandardMaterial 
             color="#101010"
             metalness={0.5}
+            roughness={0.8}
           />
         </mesh>
       </Canvas>
